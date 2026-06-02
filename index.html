@@ -2867,10 +2867,12 @@ Vines|藤蔓
           const result = legalSide ? canPlaceAt(side, lane.id, row) : { ok: false };
           const marker = rowMarker(row, lane.id);
           const items = cellItems(row, lane.id).map(item => `<span class="cell-item ${item.className}">${item.text}</span>`).join("");
+          const detail = cellDetails(row, lane.id);
           cells.push(`
             <button class="arena-cell ${riverClass(row, lane.id)} ${result.ok ? "legal" : ""}"
               data-board-row="${row}" data-board-lane="${lane.id}"
-              aria-label="${lane.label}第${row}行${result.ok ? "，可下牌" : ""}">
+              title="${escapeAttr(detail)}"
+              aria-label="${escapeAttr(`${detail}${result.ok ? "；可下牌" : ""}`)}">
               <span class="row-mark">${marker}</span>
               <span class="cell-stack">${items}</span>
             </button>
@@ -2936,6 +2938,54 @@ Vines|藤蔓
 
     function cell(row, lane) {
       return cellItems(row, lane).map(item => item.text).slice(0, 2).join(" ");
+    }
+
+    function cellDetails(row, lane) {
+      const details = [];
+      if (state.mode !== "touchdown") {
+        [state.towers.enemy.king, state.towers.enemy.left, state.towers.enemy.right, state.towers.player.king, state.towers.player.left, state.towers.player.right].forEach(t => {
+          if (Math.round(t.pos) === row && laneOccupiesCell(t.lane, lane) && t.hp > 0) {
+            details.push(`${sideName(t.side)}的${towerDisplayName(t)}，血量 ${Math.max(0, Math.round(t.hp))}/${t.maxHp}`);
+          }
+        });
+      }
+      state.units.forEach(unit => {
+        const displayLane = unitDisplayLane(unit);
+        if (Math.round(unit.pos) !== row || !laneOccupiesCell(displayLane, lane) || unit.hp <= 0) return;
+        const stateText = unitDetailState(unit);
+        const shieldText = unit.shield > 0 ? `，护盾 ${Math.round(unit.shield)}/${unit.maxShield}` : "";
+        details.push(`${sideName(unit.side)}的${cardName(unit.name)}${stateText ? `（${stateText}）` : ""}，血量 ${Math.max(0, Math.round(unit.hp))}/${unit.maxHp}${shieldText}`);
+      });
+      state.effects.forEach(effect => {
+        if (effect.kind === "beam" && beamCoversCell(effect, row, lane)) details.push("地狱塔/地狱飞龙一类的持续锁定光线经过这里");
+      });
+      return details.length
+        ? `${laneLabel(lane)}第 ${row} 行：${details.join("；")}`
+        : `${laneLabel(lane)}第 ${row} 行：这里暂时没有单位。`;
+    }
+
+    function unitDetailState(unit) {
+      const states = [];
+      if (unit.type === "Building") states.push("建筑");
+      if (unit.isAir) states.push("空中");
+      else states.push("地面");
+      if (unit.cloaked > 0 || unit.banditStealth > 0) states.push("隐身");
+      if (unit.monkProtection > 0) states.push("护体");
+      if (unit.goblinsteinLink > 0) states.push("电链");
+      if (unit.jumping > 0) states.push("跳跃/过河");
+      if (unit.frozen > 0) states.push("冰冻");
+      if (unit.rage > 0) states.push("狂暴");
+      if (unit.slowed > 0) states.push("减速");
+      if (unit.rooted > 0) states.push("禁锢");
+      return states.join("、");
+    }
+
+    function escapeAttr(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
     }
 
     function cellItems(row, lane) {
@@ -3163,14 +3213,15 @@ Vines|藤蔓
 
     function playBoardCell(row, lane) {
       const side = selectedBoardSide();
+      const detail = cellDetails(row, lane);
       if (!canUseBoardSide(side)) {
-        if (state) state.mapMessage = "先在操作盘选择一张可以支付的手牌，再点击棋盘格下牌。";
+        if (state) state.mapMessage = detail;
         renderBattle();
         return;
       }
       const result = canPlaceAt(side, lane, row);
       if (!result.ok) {
-        state.mapMessage = result.reason;
+        state.mapMessage = `${result.reason} ${detail}`;
         renderBattle();
         return;
       }
