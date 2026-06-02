@@ -536,9 +536,9 @@
 
     .arena-board {
       display: grid;
-      grid-template-columns: repeat(4, minmax(82px, 1fr));
+      grid-template-columns: repeat(6, minmax(72px, 1fr));
       gap: 2px;
-      min-width: 420px;
+      min-width: 560px;
     }
 
     .lane-head {
@@ -1210,12 +1210,14 @@ Vines|藤蔓
       { id: "rightBridge", label: "右侧桥头", lane: "R", playerPos: 10.8, enemyPos: 9.2, kind: "bridge" },
       { id: "middle", label: "半场中间", lane: "M", playerPos: 14.2, enemyPos: 5.8, kind: "middle" }
     ];
-    const LANES = [
-      { id: "L", label: "左路" },
-      { id: "ML", label: "中左" },
-      { id: "MR", label: "中右" },
-      { id: "R", label: "右路" }
-    ];
+        const LANES = [
+          { id: "L", label: "\u5de6\u8def" },
+          { id: "LL", label: "\u5de6\u4e2d" },
+          { id: "ML", label: "\u4e2d\u5de6" },
+          { id: "MR", label: "\u4e2d\u53f3" },
+          { id: "RR", label: "\u53f3\u4e2d" },
+          { id: "R", label: "\u53f3\u8def" }
+              ];
     const TOWER_BALANCE = {
       princess: { hp: 3052, damage: 109, dps: 136, hitSpeed: 0.8, range: 5.6 },
       king: { hp: 4824, damage: 109, dps: 109, hitSpeed: 1.0, range: 5.1, activationSeconds: 4 }
@@ -2020,17 +2022,24 @@ Vines|藤蔓
 
     function renderMap() {
       const rows = [];
-      const colWidth = state.mode === "duel" || state.mode === "touchdown" ? 12 : 15;
+      const colWidth = state.mode === "duel" || state.mode === "touchdown" ? 10 : 12;
       const border = "─".repeat(colWidth);
       rows.push(`${"".padEnd(6)}${LANES.map(lane => fitText(lane.label, colWidth)).join("  ")}`);
-      rows.push(`  ┌${[border, border, border, border].join("┬")}┐`);
+      rows.push(`  ┌${LANES.map(() => border).join("┬")}┐`);
       for (let row = 0; row <= 20; row++) {
         const marker = touchdownRowMarker(row) || (row === 10 ? "河" : row === 0 ? "敌" : row === 20 ? "我" : String(row).padStart(2, "0"));
         const body = LANES.map(lane => fitText(cell(row, lane.id), colWidth)).join("│");
         rows.push(`${marker}│${body}│`);
-        if (state.mode !== "touchdown" && row === 10) rows.push(`  ├${fitText("左桥", colWidth, "─")}┼${fitText("河道", colWidth, "─")}┼${fitText("河道", colWidth, "─")}┼${fitText("右桥", colWidth, "─")}┤`);
+                if (state.mode !== "touchdown" && row === 10) {
+                            const riverLabels = LANES.map(lane => {
+                                          if (lane.id === "L") return "\u5de6\u6865";
+                                          if (lane.id === "R") return "\u53f3\u6865";
+                                          return "\u6cb3\u9053";
+                            });
+                            rows.push(`  \u251c${riverLabels.map(label => fitText(label, colWidth, "\u2500")).join("\u253c")}\u2524`);
+                }
       }
-      rows.push(`  └${[border, border, border, border].join("┴")}┘`);
+      rows.push(`  └${LANES.map(() => border).join("┴")}┘`);
       rows.push("");
       rows.push(state.mode === "touchdown"
         ? "底=达阵底线 禁=中央禁区。没有塔、没有河、没有桥；双方只能在己方可下牌区部署。"
@@ -2143,7 +2152,7 @@ Vines|藤蔓
     }
 
     function isRiverLane(lane) {
-      return lane === "ML" || lane === "MR" || lane === "M";
+      return !isBridgeLane(lane);
     }
 
     function laneOccupiesCell(itemLane, cellLane) {
@@ -2814,22 +2823,34 @@ Vines|藤蔓
     }
 
     function areaDistance(aLane, aPos, bLane, bPos) {
-      const laneGap = Math.abs(laneIndex(aLane) - laneIndex(bLane)) * 2.2;
+      const laneGap = laneDistance(aLane, bLane) * 2.2;
       return Math.hypot(aPos - bPos, laneGap);
     }
 
     function laneInWidth(sourceLane, targetLane, width) {
-      return Math.abs(laneIndex(sourceLane) - laneIndex(targetLane)) * 1.8 <= width / 2;
+      return laneDistance(sourceLane, targetLane) * 1.8 <= width / 2;
     }
 
     function laneIndex(lane) {
-      if (lane === "L") return 0;
-      if (lane === "ML") return 1;
-      if (lane === "MR") return 2;
-      if (lane === "R") return 3;
-      return 1.5;
+      if (lane === "M") return laneCenterIndex();
+      const index = LANES.findIndex(item => item.id === lane);
+      return index >= 0 ? index : laneCenterIndex();
+      
+      
     }
 
+        function laneCenterIndex() {
+                return (LANES.length - 1) / 2;
+        }
+    
+        function laneWidthScale() {
+                return 3 / Math.max(1, LANES.length - 1);
+        }
+    
+        function laneDistance(aLane, bLane) {
+                return Math.abs(laneIndex(aLane) - laneIndex(bLane)) * laneWidthScale();
+        }
+    
     function knockUnitFrom(unit, centerPos, amount) {
       const dir = unit.pos <= centerPos ? -1 : 1;
       unit.pos = clampPos(unit.pos + dir * amount);
@@ -3369,8 +3390,8 @@ Vines|藤蔓
     }
 
     function laneToSide(lane) {
-      if (lane === "L" || lane === "ML") return "L";
-      if (lane === "R" || lane === "MR") return "R";
+      if (lane === "M") return null;
+      return laneIndex(lane) < LANES.length / 2 ? "L" : "R";
       return null;
     }
 
@@ -3598,11 +3619,11 @@ Vines|藤蔓
     }
 
     function laneCompatible(a, b) {
-      return a === b || a === "M" || b === "M" || Math.abs(laneIndex(a) - laneIndex(b)) <= 1;
+      return a === b || a === "M" || b === "M" || laneDistance(a, b) <= 1;
     }
 
     function distance(a, b) {
-      const lanePenalty = Math.abs(laneIndex(a.lane) - laneIndex(b.lane)) * 0.75;
+      const lanePenalty = laneDistance(a.lane, b.lane) * 0.75;
       return Math.abs(a.pos - b.pos) + lanePenalty;
     }
 
@@ -3816,7 +3837,7 @@ Vines|藤蔓
     }
 
     function laneFromIndex(index) {
-      const rounded = Math.max(0, Math.min(3, Math.round(index)));
+      const rounded = Math.max(0, Math.min(LANES.length - 1, Math.round(index)));
       return LANES[rounded].id;
     }
 
@@ -3873,8 +3894,8 @@ Vines|藤蔓
     }
 
     function riverExitLane(unit) {
-      if (unit.lane === "ML") return "L";
-      if (unit.lane === "MR") return "R";
+      const sideLane = laneToSide(unit.lane);
+      if (sideLane) return sideLane;
       const enemy = unit.side === "player" ? "enemy" : "player";
       return chooseWeakLane(enemy);
     }
