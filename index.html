@@ -1,0 +1,4196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>文字版皇室战争</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --ink: #18202f;
+      --muted: #677183;
+      --line: #d9e0eb;
+      --blue: #2368c4;
+      --red: #b83345;
+      --gold: #c3881f;
+      --green: #207a55;
+      --purple: #7250b9;
+      --soft-blue: #e8f1ff;
+      --soft-red: #fff0f2;
+      --soft-gold: #fff4db;
+      --shadow: 0 16px 48px rgba(28, 39, 59, 0.12);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, #edf3fb 0, #f7f8fb 46%, #eef2f7 100%);
+      color: var(--ink);
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
+      min-height: 38px;
+      border-radius: 8px;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: #9fb0ca;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .app {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 22px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 4vw, 42px);
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-top: 6px;
+      max-width: 760px;
+      line-height: 1.55;
+    }
+
+    .status-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--muted);
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .setup-grid {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) 360px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .panel-title {
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .panel-body {
+      padding: 16px;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: minmax(170px, 1fr) 130px 130px;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .filters input, .filters select {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 10px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .card-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
+      gap: 9px;
+      max-height: 66vh;
+      overflow: auto;
+      padding-right: 6px;
+    }
+
+    .card-tile {
+      min-height: 74px;
+      padding: 10px;
+      text-align: left;
+      border-radius: 8px;
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 9px;
+      align-items: center;
+      background: #fff;
+    }
+
+    .card-tile.selected {
+      border-color: var(--blue);
+      background: var(--soft-blue);
+    }
+
+    .card-tile.enemy-selected {
+      border-color: var(--red);
+      background: var(--soft-red);
+    }
+
+    .cost {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      background: var(--purple);
+      color: #fff;
+      font-weight: 900;
+    }
+
+    .card-name {
+      font-weight: 800;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    .card-meta {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .mini-badge {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 2px 7px;
+      background: #f8fafc;
+    }
+
+    .deck-slots {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .slot {
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 48px;
+      border: 1px dashed #bbc7d8;
+      border-radius: 8px;
+      padding: 7px;
+      background: #fbfcff;
+    }
+
+    .slot.empty {
+      color: var(--muted);
+    }
+
+    .primary {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+      padding: 0 14px;
+      font-weight: 800;
+    }
+
+    .secondary {
+      padding: 0 12px;
+      font-weight: 700;
+    }
+
+    .danger {
+      background: var(--soft-red);
+      color: var(--red);
+      border-color: #f2bdc5;
+    }
+
+    .mode-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .editor-tabs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .difficulty-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .mode-row button,
+    .editor-tabs button,
+    .difficulty-row button {
+      font-weight: 800;
+    }
+
+    .mode-row button.active,
+    .editor-tabs button.active,
+    .difficulty-row button.active {
+      border-color: var(--blue);
+      background: var(--soft-blue);
+      color: var(--blue);
+    }
+
+    .editor-tabs button.enemy-active {
+      border-color: var(--red);
+      background: var(--soft-red);
+      color: var(--red);
+    }
+
+    .battle-grid {
+      display: grid;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .battle-grid.ai {
+      grid-template-columns: minmax(300px, 1.08fr) minmax(330px, 0.92fr);
+    }
+
+    .battle-grid.touchdown {
+      grid-template-columns: minmax(300px, 1.08fr) minmax(330px, 0.92fr);
+    }
+
+    .battle-grid.duel {
+      grid-template-columns: minmax(250px, 0.74fr) minmax(420px, 1.24fr) minmax(250px, 0.74fr);
+    }
+
+    .battle-grid.demo {
+      grid-template-columns: minmax(250px, 0.74fr) minmax(420px, 1.24fr) minmax(250px, 0.74fr);
+    }
+
+    .battle-grid.ai #enemyControlPanel,
+    .battle-grid.touchdown #enemyControlPanel {
+      display: none;
+    }
+
+    .battle-grid.ai .arena-panel,
+    .battle-grid.touchdown .arena-panel {
+      order: 1;
+    }
+
+    .battle-grid.ai #playerControlPanel,
+    .battle-grid.touchdown #playerControlPanel {
+      order: 2;
+    }
+
+    .battle-grid.duel #playerControlPanel {
+      order: 1;
+    }
+
+    .battle-grid.duel .arena-panel {
+      order: 2;
+    }
+
+    .battle-grid.duel #enemyControlPanel {
+      order: 3;
+    }
+
+    .battle-grid.demo #playerControlPanel {
+      order: 1;
+    }
+
+    .battle-grid.demo .arena-panel {
+      order: 2;
+    }
+
+    .battle-grid.demo #enemyControlPanel {
+      order: 3;
+    }
+
+    .battle-grid.duel .hand-grid,
+    .battle-grid.demo .hand-grid,
+    .battle-grid.duel .placement-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .battle-grid.duel .map,
+    .battle-grid.demo .map {
+      padding: 10px;
+    }
+
+    .control-panel.submitted {
+      opacity: 0.76;
+    }
+
+    .side-status {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .side-status strong {
+      color: var(--ink);
+      font-size: 18px;
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .hud-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px 12px;
+      min-height: 64px;
+    }
+
+    .hud-label {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .hud-value {
+      margin-top: 4px;
+      font-weight: 900;
+      font-size: 19px;
+    }
+
+    .tower-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .tower-box {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .tower-box.enemy {
+      border-color: #efb6bf;
+      background: var(--soft-red);
+    }
+
+    .tower-box.player {
+      border-color: #bdd3f4;
+      background: var(--soft-blue);
+    }
+
+    .bar {
+      height: 8px;
+      background: rgba(24, 32, 47, 0.1);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 7px;
+    }
+
+    .bar > span {
+      display: block;
+      height: 100%;
+      width: 100%;
+      background: var(--green);
+    }
+
+    .enemy .bar > span { background: var(--red); }
+    .player .bar > span { background: var(--blue); }
+
+    .map {
+      width: 100%;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #111827;
+      color: #d5e2f7;
+      padding: 14px;
+      min-height: 540px;
+      position: relative;
+    }
+
+    .arena-danmaku {
+      position: absolute;
+      left: 50%;
+      top: 52%;
+      z-index: 8;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      padding: 8px 22px;
+      border: 1px solid rgba(207, 226, 255, 0.35);
+      border-radius: 999px;
+      background: rgba(12, 20, 34, 0.58);
+      color: rgba(245, 250, 255, 0.92);
+      font-size: clamp(18px, 3vw, 34px);
+      font-weight: 900;
+      letter-spacing: 0;
+      text-shadow: 0 0 18px rgba(112, 180, 255, 0.72);
+      white-space: nowrap;
+      opacity: 0;
+      display: none;
+    }
+
+    .arena-danmaku.active {
+      display: block;
+      animation: danmakuFlash 1.85s ease both;
+    }
+
+    @keyframes danmakuFlash {
+      0% {
+        opacity: 0;
+        transform: translate(-68%, -50%) scale(0.96);
+      }
+      18% {
+        opacity: 0.76;
+      }
+      50% {
+        opacity: 0.58;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      82% {
+        opacity: 0.72;
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-32%, -50%) scale(0.98);
+      }
+    }
+
+    .map-hint {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      color: #b9c8df;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .arena-board {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(82px, 1fr));
+      gap: 2px;
+      min-width: 420px;
+    }
+
+    .lane-head {
+      min-height: 28px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #334155;
+      background: #172033;
+      color: #e5edf8;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .arena-cell {
+      min-height: 30px;
+      border: 1px solid #2d3a50;
+      background: #101827;
+      color: #d5e2f7;
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr);
+      align-items: center;
+      gap: 4px;
+      padding: 2px 5px;
+      text-align: left;
+      border-radius: 0;
+      font-size: 11px;
+      line-height: 1.15;
+    }
+
+    .arena-cell:hover:not(:disabled) {
+      transform: none;
+      border-color: #86b7ff;
+      background: #18304f;
+    }
+
+    .arena-cell.legal {
+      background: #10243c;
+      border-color: #2d6eb3;
+    }
+
+    .arena-cell.selected-target {
+      outline: 2px solid #f2c94c;
+      outline-offset: -2px;
+    }
+
+    .arena-cell.river {
+      background: #123456;
+      border-color: #4b95d1;
+    }
+
+    .arena-cell.bridge {
+      background: #26331e;
+      border-color: #7a9a48;
+    }
+
+    .arena-cell.neutral {
+      background: #242735;
+      border-color: #667085;
+    }
+
+    .arena-cell.goal {
+      background: #35291b;
+      border-color: #d39d3e;
+    }
+
+    .row-mark {
+      color: #97a8c2;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .cell-stack {
+      display: grid;
+      gap: 1px;
+      min-width: 0;
+    }
+
+    .cell-item {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cell-item.tower {
+      color: #f4d38a;
+    }
+
+    .cell-item.player {
+      color: #9ec7ff;
+    }
+
+    .cell-item.enemy {
+      color: #ffabb7;
+    }
+
+    .cell-item.beam {
+      color: #ffd166;
+      text-shadow: 0 0 8px rgba(255, 209, 102, 0.8);
+    }
+
+    pre {
+      display: none;
+    }
+
+    .hand-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .hand-card {
+      min-height: 94px;
+      padding: 10px;
+      text-align: left;
+      background: #fff;
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .hand-card.active {
+      border-color: var(--gold);
+      background: var(--soft-gold);
+    }
+
+    .hand-card .card-meta {
+      font-size: 11px;
+    }
+
+    .placement-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .placement-grid button {
+      min-height: 50px;
+      padding: 6px;
+      font-weight: 800;
+      line-height: 1.18;
+    }
+
+    .battle-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .log {
+      height: 250px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcff;
+      padding: 10px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .log-entry {
+      border-bottom: 1px solid #eef2f7;
+      padding: 5px 0;
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(14, 20, 31, 0.52);
+      z-index: 20;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-card {
+      width: min(560px, 100%);
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .modal-card h2 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+
+    .source-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      margin-top: 14px;
+    }
+
+    .source-note a {
+      color: var(--blue);
+    }
+
+    @media (max-width: 980px) {
+      .setup-grid,
+      .battle-grid,
+      .battle-grid.ai,
+      .battle-grid.duel,
+      .battle-grid.demo,
+      .battle-grid.touchdown {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .status-pills {
+        justify-content: flex-start;
+      }
+
+      .hud {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .placement-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .app {
+        padding: 14px;
+      }
+
+      .filters,
+      .mode-row,
+      .editor-tabs,
+      .difficulty-row,
+      .hand-grid,
+      .tower-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .card-list {
+        max-height: 58vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="topbar">
+      <div>
+        <h1>文字版皇室战争</h1>
+        <div class="subtitle">选 8 张卡，进入文字竞技场。前 2 分钟为单倍圣水；120 秒后进入双倍圣水，180 秒后进入一塔决胜，240 秒后进入三倍圣水，300 秒终局结算。</div>
+      </div>
+      <div class="status-pills" id="topPills"></div>
+    </div>
+
+    <section id="setupScreen" class="screen active">
+      <div class="setup-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title">卡牌池</div>
+            <div class="pill" id="cardCountPill">121 张可选</div>
+          </div>
+          <div class="panel-body">
+            <div class="filters">
+              <input id="searchInput" type="search" placeholder="搜索卡牌名，例如野猪、火球、哥布林">
+              <select id="typeFilter">
+                <option value="all">全部类型</option>
+                <option value="Troop">军队</option>
+                <option value="Building">建筑</option>
+                <option value="Spell">法术</option>
+              </select>
+              <select id="costFilter">
+                <option value="all">全部圣水</option>
+                <option value="0-2">0-2 费</option>
+                <option value="3-4">3-4 费</option>
+                <option value="5-6">5-6 费</option>
+                <option value="7-9">7-9 费</option>
+              </select>
+            </div>
+            <div class="card-list" id="cardList"></div>
+          </div>
+        </section>
+
+        <aside class="panel">
+          <div class="panel-head">
+            <div class="panel-title" id="deckPanelTitle">你的 8 张卡</div>
+            <div class="pill" id="deckCount">0 / 8</div>
+          </div>
+          <div class="panel-body">
+            <div class="mode-row" id="modeRow">
+              <button data-mode="ai">对战电脑</button>
+              <button data-mode="duel">同屏双人</button>
+              <button data-mode="demo">演示模式</button>
+              <button data-mode="touchdown">达阵模式</button>
+            </div>
+            <div class="difficulty-row" id="difficultyRow">
+              <button data-difficulty="easy">简单</button>
+              <button data-difficulty="normal">普通</button>
+              <button data-difficulty="hard">困难</button>
+              <button data-difficulty="pharaoh">法老</button>
+            </div>
+            <div class="source-note" id="difficultyHint"></div>
+            <div class="editor-tabs" id="editorTabs">
+              <button data-edit-side="player">编辑玩家A</button>
+              <button data-edit-side="enemy">编辑玩家B</button>
+            </div>
+            <div class="deck-slots" id="deckSlots"></div>
+            <button class="primary" id="startBtn" disabled>开始对战</button>
+            <button class="secondary" id="randomBtn">给当前玩家随机组一套</button>
+            <button class="secondary danger" id="clearBtn">清空</button>
+            <div class="source-note">
+              数据基于 2026 年 5 月卡牌池和热门卡组页面整理；塔兵、英雄槽和进化槽在本文字版里不单独建槽，电脑热门卡组会把进化和英雄视为对应基础卡的强化思路。
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="battleScreen" class="screen">
+      <div class="hud">
+        <div class="hud-card"><div class="hud-label">战斗时间</div><div class="hud-value" id="timeHud">0 秒</div></div>
+        <div class="hud-card"><div class="hud-label">节奏</div><div class="hud-value" id="phaseHud">单倍</div></div>
+        <div class="hud-card"><div class="hud-label" id="playerElixirLabel">你的圣水</div><div class="hud-value" id="playerElixirHud">5 / 10</div></div>
+        <div class="hud-card"><div class="hud-label" id="enemyHudLabel">电脑卡组</div><div class="hud-value" id="enemyDeckHud">-</div></div>
+      </div>
+
+      <div class="battle-grid ai" id="battleGrid">
+        <aside class="panel control-panel" id="playerControlPanel">
+          <div class="panel-head">
+            <div class="panel-title" id="playerControlTitle">出牌区</div>
+            <div class="pill" id="playerSelectedHint">先选一张手牌</div>
+          </div>
+          <div class="panel-body">
+            <div class="side-status" id="playerSideStatus"></div>
+            <div class="hand-grid" id="playerHandGrid"></div>
+            <div class="placement-grid" id="playerPlacementGrid"></div>
+            <div class="battle-actions">
+              <button class="secondary" id="playerSkipBtn">存圣水，本回合不下牌</button>
+              <button class="secondary" id="autoBtn">自动推进：关</button>
+              <button class="secondary" id="demoSlowerBtn">减速</button>
+              <button class="secondary" id="demoFasterBtn">加速</button>
+              <button class="secondary danger" id="backBtn">重新选卡</button>
+            </div>
+          </div>
+        </aside>
+
+        <section class="panel arena-panel">
+          <div class="panel-head">
+            <div class="panel-title">文字竞技场</div>
+            <div class="pill" id="turnHud">第 1 回合</div>
+          </div>
+          <div class="panel-body">
+            <div class="tower-strip" id="towerStrip"></div>
+            <div class="map">
+              <div class="arena-danmaku" id="arenaDanmaku"></div>
+              <div class="map-hint" id="mapHint"></div>
+              <div class="arena-board" id="arenaBoard"></div>
+              <pre id="arenaMap"></pre>
+            </div>
+            <h3>战报</h3>
+            <div class="log" id="battleLog"></div>
+          </div>
+        </section>
+
+        <aside class="panel control-panel" id="enemyControlPanel">
+          <div class="panel-head">
+            <div class="panel-title" id="enemyControlTitle">玩家B操作盘</div>
+            <div class="pill" id="enemySelectedHint">先选一张手牌</div>
+          </div>
+          <div class="panel-body">
+            <div class="side-status" id="enemySideStatus"></div>
+            <div class="hand-grid" id="enemyHandGrid"></div>
+            <div class="placement-grid" id="enemyPlacementGrid"></div>
+            <div class="battle-actions">
+              <button class="secondary" id="enemySkipBtn">存圣水，本回合不下牌</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal" id="resultModal">
+    <div class="modal-card">
+      <h2 id="resultTitle">战斗结束</h2>
+      <p id="resultText"></p>
+      <div class="battle-actions">
+        <button class="primary" id="rematchBtn">用这套卡再来一局</button>
+        <button class="secondary" id="newDeckBtn">重新选卡</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CARD_TEXT = `
+Knight|3|common
+Archers|3|common
+Goblins|2|common
+Giant|5|rare
+P.E.K.K.A|7|epic
+Minions|3|common
+Balloon|5|epic
+Witch|5|epic
+Barbarians|5|common
+Golem|8|epic
+Skeletons|1|common
+Valkyrie|4|rare
+Skeleton Army|3|epic
+Bomber|2|common
+Musketeer|4|rare
+Baby Dragon|4|epic
+Prince|5|epic
+Wizard|5|rare
+Mini P.E.K.K.A|4|rare
+Spear Goblins|2|common
+Giant Skeleton|6|epic
+Hog Rider|4|rare
+Minion Horde|5|common
+Ice Wizard|3|legendary
+Royal Giant|6|common
+Guards|3|epic
+Princess|3|legendary
+Dark Prince|4|epic
+Three Musketeers|9|rare
+Lava Hound|7|legendary
+Ice Spirit|1|common
+Fire Spirit|1|common
+Miner|3|legendary
+Sparky|6|legendary
+Bowler|5|epic
+Lumberjack|4|legendary
+Battle Ram|4|rare
+Inferno Dragon|4|legendary
+Ice Golem|2|rare
+Mega Minion|3|rare
+Dart Goblin|3|rare
+Goblin Gang|3|common
+Electro Wizard|4|legendary
+Elite Barbarians|6|common
+Hunter|4|epic
+Executioner|5|epic
+Bandit|3|legendary
+Royal Recruits|7|common
+Night Witch|4|legendary
+Bats|2|common
+Royal Ghost|3|legendary
+Ram Rider|5|legendary
+Zappies|4|rare
+Rascals|5|common
+Cannon Cart|5|epic
+Mega Knight|7|legendary
+Skeleton Barrel|3|common
+Flying Machine|4|rare
+Wall Breakers|2|epic
+Royal Hogs|5|rare
+Goblin Giant|6|epic
+Fisherman|3|legendary
+Magic Archer|4|legendary
+Electro Dragon|5|epic
+Firecracker|3|common
+Mighty Miner|4|champion
+Elixir Golem|3|rare
+Battle Healer|4|rare
+Skeleton King|4|champion
+Archer Queen|5|champion
+Golden Knight|4|champion
+Monk|5|champion
+Skeleton Dragons|4|common
+Mother Witch|4|legendary
+Electro Spirit|1|common
+Electro Giant|7|epic
+Phoenix|4|legendary
+Little Prince|3|champion
+Goblin Demolisher|4|rare
+Goblin Machine|5|legendary
+Suspicious Bush|2|rare
+Goblinstein|5|champion
+Rune Giant|4|epic
+Berserker|2|common
+Boss Bandit|6|champion
+Cannon|3|common
+Goblin Hut|4|rare
+Mortar|4|common
+Inferno Tower|5|rare
+Bomb Tower|4|rare
+Barbarian Hut|6|rare
+Tesla|4|common
+Elixir Collector|6|rare
+X-Bow|6|epic
+Tombstone|3|rare
+Furnace|4|rare
+Goblin Cage|4|rare
+Goblin Drill|4|epic
+Fireball|4|rare
+Arrows|3|common
+Rage|2|epic
+Rocket|6|rare
+Goblin Barrel|3|epic
+Freeze|4|epic
+Mirror|0|epic
+Lightning|6|epic
+Zap|2|common
+Poison|4|epic
+Graveyard|5|legendary
+The Log|2|legendary
+Tornado|3|epic
+Clone|3|epic
+Earthquake|3|rare
+Barbarian Barrel|2|epic
+Heal Spirit|1|rare
+Giant Snowball|2|common
+Royal Delivery|3|common
+Void|3|epic
+Goblin Curse|2|epic
+Spirit Empress|6|legendary
+Vines|3|epic
+`.trim();
+
+    const CARD_CN = Object.fromEntries(`
+Knight|骑士
+Archers|弓箭手
+Goblins|哥布林
+Giant|巨人
+P.E.K.K.A|皮卡超人
+Minions|亡灵
+Balloon|气球兵
+Witch|女巫
+Barbarians|野蛮人
+Golem|戈仑石人
+Skeletons|骷髅兵
+Valkyrie|瓦基丽武神
+Skeleton Army|骷髅军团
+Bomber|炸弹兵
+Musketeer|火枪手
+Baby Dragon|飞龙宝宝
+Prince|王子
+Wizard|法师
+Mini P.E.K.K.A|迷你皮卡
+Spear Goblins|哥布林投矛手
+Giant Skeleton|骷髅巨人
+Hog Rider|野猪骑士
+Minion Horde|亡灵大军
+Ice Wizard|寒冰法师
+Royal Giant|皇家巨人
+Guards|骷髅守卫
+Princess|公主
+Dark Prince|黑暗王子
+Three Musketeers|三个火枪手
+Lava Hound|熔岩猎犬
+Ice Spirit|冰雪精灵
+Fire Spirit|烈焰精灵
+Miner|掘地矿工
+Sparky|电磁炮
+Bowler|巨石投手
+Lumberjack|狂暴樵夫
+Battle Ram|野蛮人攻城槌
+Inferno Dragon|地狱飞龙
+Ice Golem|戈仑冰人
+Mega Minion|重甲亡灵
+Dart Goblin|吹箭哥布林
+Goblin Gang|哥布林团伙
+Electro Wizard|闪电法师
+Elite Barbarians|野蛮人精锐
+Hunter|猎人
+Executioner|飞斧屠夫
+Bandit|幻影刺客
+Royal Recruits|皇家卫队
+Night Witch|暗夜女巫
+Bats|蝙蝠
+Royal Ghost|皇家幽灵
+Ram Rider|蛮羊骑士
+Zappies|电击车小队
+Rascals|绿林团伙
+Cannon Cart|加农炮战车
+Mega Knight|超级骑士
+Skeleton Barrel|骷髅气球
+Flying Machine|飞行器
+Wall Breakers|攻城炸弹人
+Royal Hogs|皇家野猪
+Goblin Giant|哥布林巨人
+Fisherman|渔夫
+Magic Archer|神箭游侠
+Electro Dragon|雷电飞龙
+Firecracker|烟花炮手
+Mighty Miner|威猛矿工
+Elixir Golem|圣水戈仑
+Battle Healer|战斗天使
+Skeleton King|骷髅帝王
+Archer Queen|弓箭女皇
+Golden Knight|黄金圣骑
+Monk|盖世武僧
+Skeleton Dragons|骷髅飞龙
+Mother Witch|女巫婆婆
+Electro Spirit|雷电精灵
+Electro Giant|雷电巨人
+Phoenix|凤凰
+Little Prince|小王子
+Goblin Demolisher|哥布林爆破手
+Goblin Machine|哥布林机甲
+Suspicious Bush|可疑草丛
+Goblinstein|哥布林斯坦
+Rune Giant|符文巨人
+Berserker|狂战士
+Boss Bandit|刺客首领
+Cannon|加农炮
+Goblin Hut|哥布林小屋
+Mortar|迫击炮
+Inferno Tower|地狱之塔
+Bomb Tower|炸弹塔
+Barbarian Hut|野蛮人小屋
+Tesla|特斯拉电磁塔
+Elixir Collector|圣水收集器
+X-Bow|十字连弩
+Tombstone|骷髅墓碑
+Furnace|烈焰熔炉
+Goblin Cage|哥布林牢笼
+Goblin Drill|哥布林钻机
+Fireball|火球
+Arrows|万箭齐发
+Rage|狂暴法术
+Rocket|火箭
+Goblin Barrel|哥布林飞桶
+Freeze|冰冻法术
+Mirror|镜像法术
+Lightning|雷电法术
+Zap|电击法术
+Poison|毒药法术
+Graveyard|骷髅召唤
+The Log|滚木
+Tornado|飓风法术
+Clone|克隆法术
+Earthquake|地震法术
+Barbarian Barrel|野蛮人滚桶
+Heal Spirit|治疗精灵
+Giant Snowball|大雪球
+Royal Delivery|皇家速递
+Void|虚空法术
+Goblin Curse|哥布林诅咒
+Spirit Empress|精灵女王
+Spirit Empress Ground|精灵女王（地面）
+Spirit Empress Air|精灵女王（空中）
+Goblin Brawler|壮汉哥布林
+Cursed Hog|诅咒野猪
+Rascal Boy|绿林小哥
+Rascal Girl|绿林小妹
+Vines|藤蔓
+`.trim().split("\n").map(line => line.split("|")));
+
+    const RARITY_CN = { common: "普通", rare: "稀有", epic: "史诗", legendary: "传奇", champion: "英雄" };
+
+    const PLACEMENTS = [
+      { id: "kingLeft", label: "国王塔左侧", lane: "L", playerPos: 16.2, enemyPos: 3.8, kind: "safe" },
+      { id: "kingRight", label: "国王塔右侧", lane: "R", playerPos: 16.2, enemyPos: 3.8, kind: "safe" },
+      { id: "leftBridge", label: "左侧桥头", lane: "L", playerPos: 10.8, enemyPos: 9.2, kind: "bridge" },
+      { id: "rightBridge", label: "右侧桥头", lane: "R", playerPos: 10.8, enemyPos: 9.2, kind: "bridge" },
+      { id: "middle", label: "半场中间", lane: "M", playerPos: 14.2, enemyPos: 5.8, kind: "middle" }
+    ];
+    const LANES = [
+      { id: "L", label: "左路" },
+      { id: "ML", label: "中左" },
+      { id: "MR", label: "中右" },
+      { id: "R", label: "右路" }
+    ];
+    const TOWER_BALANCE = {
+      princess: { hp: 3052, damage: 109, dps: 136, hitSpeed: 0.8, range: 5.6 },
+      king: { hp: 4824, damage: 109, dps: 109, hitSpeed: 1.0, range: 5.1, activationSeconds: 4 }
+    };
+    const SPIRIT_EMPRESS_FORMS = {
+      ground: { name: "Spirit Empress Ground", cost: 3, hp: 1152, damageScale: 0.86, range: 0.9, speed: 1.55, isAir: false, isRanged: false, canHitAir: false },
+      air: { name: "Spirit Empress Air", cost: 6, hp: 1177, damageScale: 1.0, range: 3.8, speed: 1.05, isAir: true, isRanged: true, canHitAir: true }
+    };
+
+    const META_DECKS = [
+      {
+        name: "连弩特斯拉 3.0",
+        source: "RoyalTracker Arena 26 #1",
+        weight: 4,
+        cards: ["Archers", "Tesla", "Knight", "X-Bow", "Fireball", "Skeletons", "Electro Spirit", "The Log"]
+      },
+      {
+        name: "滚木飞桶诱导",
+        source: "RoyalTracker Arena 26 #2",
+        weight: 3,
+        cards: ["Goblin Barrel", "Knight", "Rocket", "Princess", "Goblin Gang", "Ice Spirit", "The Log", "Inferno Tower"]
+      },
+      {
+        name: "野猪 2.6 速转",
+        source: "RoyalTracker Arena 26 #3",
+        weight: 3,
+        cards: ["Musketeer", "Cannon", "Ice Golem", "Hog Rider", "Fireball", "Skeletons", "Ice Spirit", "The Log"]
+      },
+      {
+        name: "骷髅气球迫击炮消耗",
+        source: "RoyalTracker Mortar ladder deck",
+        weight: 2,
+        cards: ["Skeleton Barrel", "Mortar", "Cannon Cart", "Berserker", "Fireball", "Goblin Gang", "Ice Wizard", "Barbarian Barrel"]
+      },
+      {
+        name: "巨人骷髅召唤",
+        source: "RoyalTracker Arena 26 #6",
+        weight: 2,
+        cards: ["Witch", "Giant Snowball", "Mini P.E.K.K.A", "Graveyard", "Giant", "Bowler", "Vines", "Minions"]
+      },
+      {
+        name: "超级骑士控制",
+        source: "RoyalTracker Arena 26 #8",
+        weight: 1,
+        cards: ["Mega Knight", "Valkyrie", "Elixir Golem", "Witch", "Wizard", "Firecracker", "Arrows", "Bats"]
+      }
+    ];
+
+    const rows = CARD_TEXT.split("\n").map(line => {
+      const [name, cost, rarity] = line.split("|");
+      return { name, zh: cardName(name), cost: Number(cost), rarity };
+    });
+    const buildingStart = rows.findIndex(card => card.name === "Cannon");
+    const spellStart = rows.findIndex(card => card.name === "Fireball");
+
+    const set = list => new Set(list);
+    const troopTypeOverrides = set(["Heal Spirit", "Spirit Empress"]);
+    const airNames = set(["Minions", "Balloon", "Minion Horde", "Baby Dragon", "Lava Hound", "Inferno Dragon", "Mega Minion", "Bats", "Skeleton Barrel", "Flying Machine", "Skeleton Dragons", "Electro Dragon", "Phoenix", "Spirit Empress"]);
+    const airHitOverrides = set(["Ice Spirit", "Fire Spirit", "Electro Spirit", "Heal Spirit"]);
+    const buildingTargeters = set(["Giant", "Golem", "Balloon", "Hog Rider", "Royal Giant", "Lava Hound", "Battle Ram", "Ice Golem", "Ram Rider", "Skeleton Barrel", "Wall Breakers", "Royal Hogs", "Goblin Giant", "Elixir Golem", "Electro Giant", "Rune Giant"]);
+    const rangedNames = set(["Archers", "Musketeer", "Baby Dragon", "Witch", "Wizard", "Spear Goblins", "Ice Wizard", "Princess", "Three Musketeers", "Inferno Dragon", "Mega Minion", "Dart Goblin", "Electro Wizard", "Hunter", "Executioner", "Rascals", "Zappies", "Flying Machine", "Magic Archer", "Electro Dragon", "Firecracker", "Archer Queen", "Mother Witch", "Electro Spirit", "Phoenix", "Little Prince", "Goblin Machine", "Goblinstein", "Skeleton Dragons", "Minions", "Minion Horde", "Bats", "Spirit Empress"]);
+    const splashNames = set(["Valkyrie", "Bomber", "Baby Dragon", "Wizard", "Witch", "Dark Prince", "Sparky", "Bowler", "Executioner", "Mega Knight", "Firecracker", "Electro Wizard", "Electro Dragon", "Skeleton King", "Golden Knight", "Monk", "Electro Giant", "Goblin Demolisher", "Goblinstein", "Boss Bandit", "Bomb Tower", "Mortar", "Furnace"]);
+    const swarmNames = set(["Archers", "Goblins", "Minions", "Barbarians", "Skeletons", "Skeleton Army", "Spear Goblins", "Minion Horde", "Guards", "Three Musketeers", "Goblin Gang", "Elite Barbarians", "Royal Recruits", "Bats", "Zappies", "Rascals", "Skeleton Dragons", "Royal Hogs"]);
+    const fastNames = set(["Goblins", "Hog Rider", "Prince", "Battle Ram", "Lumberjack", "Bandit", "Bats", "Royal Ghost", "Ram Rider", "Wall Breakers", "Royal Hogs", "Elite Barbarians", "Fire Spirit", "Ice Spirit", "Electro Spirit", "Heal Spirit", "Berserker", "Boss Bandit"]);
+    const slowNames = set(["Giant", "P.E.K.K.A", "Golem", "Giant Skeleton", "Lava Hound", "Bowler", "Sparky", "Royal Giant", "Electro Giant", "Mega Knight", "Goblin Giant", "Rune Giant"]);
+    const highDpsNames = set(["P.E.K.K.A", "Mini P.E.K.K.A", "Prince", "Sparky", "Inferno Dragon", "Inferno Tower", "Hunter", "Mighty Miner", "Archer Queen", "Boss Bandit"]);
+    const buildingAirAttackers = set(["Inferno Tower", "Tesla"]);
+    const noAttackBuildings = set(["Elixir Collector", "Goblin Cage", "Goblin Hut", "Barbarian Hut", "Tombstone", "Furnace", "Goblin Drill"]);
+    const infernoBeamNames = set(["Inferno Tower", "Inferno Dragon"]);
+    const spawnerProfiles = {
+      "Goblin Hut": { spawnName: "Spear Goblins", spawnEvery: 2, spawnCount: 1, deathSpawnName: "Spear Goblins", deathSpawnCount: 3, life: 11 },
+      "Barbarian Hut": { spawnName: "Barbarians", spawnEvery: 5, spawnCount: 3, deathSpawnName: "Barbarians", deathSpawnCount: 1, life: 10 },
+      "Tombstone": { spawnName: "Skeletons", spawnEvery: 2, spawnCount: 2, deathSpawnName: "Skeletons", deathSpawnCount: 4, life: 10 },
+      "Furnace": { spawnName: "Fire Spirit", spawnEvery: 2, spawnCount: 1, deathSpawnName: "Fire Spirit", deathSpawnCount: 1, life: 11 },
+      "Goblin Drill": { spawnName: "Goblins", spawnEvery: 1, spawnCount: 1, deathSpawnName: "Goblins", deathSpawnCount: 3, life: 3 },
+      "Goblin Cage": { deathSpawnName: "Goblin Brawler", deathSpawnCount: 1, life: 7 },
+      "Elixir Collector": { life: 14 }
+    };
+    const winConditions = set(["Hog Rider", "Giant", "Golem", "Balloon", "Royal Giant", "Lava Hound", "Battle Ram", "Ram Rider", "Skeleton Barrel", "Wall Breakers", "Royal Hogs", "Goblin Giant", "Elixir Golem", "Electro Giant", "Goblin Barrel", "Graveyard", "Goblin Drill", "X-Bow", "Mortar", "Mega Knight", "Giant Skeleton", "Goblinstein", "Rune Giant"]);
+    const riverJumpers = set(["Hog Rider", "Royal Hogs", "Prince", "Dark Prince", "Ram Rider"]);
+    const diesOnAttackNames = set(["Ice Spirit", "Fire Spirit", "Electro Spirit", "Heal Spirit", "Skeleton Barrel", "Battle Ram", "Suspicious Bush", "Wall Breakers"]);
+    const ownHalfOnlySpells = set(["The Log", "Barbarian Barrel", "Royal Delivery"]);
+    const spellAreas = {
+      "Fireball": { radius: 2.5, towerRatio: 0.30, knock: 0.45 },
+      "Rocket": { radius: 2.0, towerRatio: 0.25 },
+      "Arrows": { radius: 3.5, towerRatio: 0.25 },
+      "Poison": { radius: 3.5, towerRatio: 0.25 },
+      "Freeze": { radius: 3.0, towerRatio: 0.30 },
+      "Lightning": { radius: 3.5, towerRatio: 0.27 },
+      "Zap": { radius: 2.5, towerRatio: 0.30, stun: 1 },
+      "Giant Snowball": { radius: 2.5, towerRatio: 0.30, knock: 0.85, slow: 2 },
+      "Earthquake": { radius: 3.5, towerRatio: 0.67, groundOnly: true, buildingBonus: 3.5, slow: 2 },
+      "Void": { radius: 2.5, towerRatio: 0.28 },
+      "Rage": { radius: 4.0, towerRatio: 0.30 },
+      "Tornado": { radius: 5.5, towerRatio: 0.32 },
+      "Goblin Curse": { radius: 3.0, towerRatio: 0.30 },
+      "Vines": { radius: 3.2, towerRatio: 0.30 }
+    };
+    const lineSpells = {
+      "The Log": { length: 10.1, width: 3.9, knock: 0.9, towerRatio: 0.15 },
+      "Barbarian Barrel": { length: 4.5, width: 2.6, knock: 0.45, towerRatio: 0.20 }
+    };
+
+    const rarityBonus = { common: 0, rare: 35, epic: 75, legendary: 115, champion: 145 };
+    const countMap = {
+      "Archers": 2, "Goblins": 4, "Minions": 3, "Barbarians": 5, "Skeletons": 3,
+      "Skeleton Army": 14, "Spear Goblins": 3, "Minion Horde": 6, "Guards": 3,
+      "Three Musketeers": 3, "Goblin Gang": 6, "Elite Barbarians": 2,
+      "Royal Recruits": 6, "Bats": 5, "Zappies": 3, "Rascals": 3,
+      "Skeleton Dragons": 2, "Royal Hogs": 4, "Wall Breakers": 2
+    };
+    const shieldedNames = set(["Guards", "Royal Recruits", "Dark Prince", "Cannon Cart"]);
+    const groupDeployProfiles = {
+      "Archers": [{ name: "Archers", count: 2 }],
+      "Goblins": [{ name: "Goblins", count: 4 }],
+      "Minions": [{ name: "Minions", count: 3 }],
+      "Barbarians": [{ name: "Barbarians", count: 5 }],
+      "Skeletons": [{ name: "Skeletons", count: 3 }],
+      "Skeleton Army": [{ name: "Skeletons", count: 14 }],
+      "Spear Goblins": [{ name: "Spear Goblins", count: 3 }],
+      "Minion Horde": [{ name: "Minions", count: 6 }],
+      "Guards": [{ name: "Guards", count: 3, shield: true }],
+      "Three Musketeers": [{ name: "Musketeer", count: 3 }],
+      "Goblin Gang": [{ name: "Goblins", count: 3 }, { name: "Spear Goblins", count: 3 }],
+      "Elite Barbarians": [{ name: "Elite Barbarians", count: 2 }],
+      "Royal Recruits": [{ name: "Royal Recruits", count: 6, shield: true, wide: true }],
+      "Bats": [{ name: "Bats", count: 5 }],
+      "Zappies": [{ name: "Zappies", count: 3 }],
+      "Rascals": [{ name: "Rascal Boy", count: 1 }, { name: "Rascal Girl", count: 2 }],
+      "Skeleton Dragons": [{ name: "Skeleton Dragons", count: 2 }],
+      "Royal Hogs": [{ name: "Royal Hogs", count: 4 }],
+      "Wall Breakers": [{ name: "Wall Breakers", count: 2 }]
+    };
+
+    const CARDS = rows.map((seed, index) => makeProfile(seed, index));
+    const cardByName = new Map(CARDS.map(card => [card.name, card]));
+
+    function cardName(name) {
+      const clean = String(name).replace(/ Clone$/, "");
+      const suffix = String(name).endsWith(" Clone") ? "克隆" : "";
+      return `${suffix}${CARD_CN[clean] || clean}`;
+    }
+
+    function rarityLabel(rarity) {
+      return RARITY_CN[rarity] || rarity;
+    }
+
+    function cardListText(names) {
+      return names.map(cardName).join(" / ");
+    }
+
+    function setupBadges(card) {
+      const badges = [typeLabel(card.type), rarityLabel(card.rarity)];
+      badges.push(...combatBadges(card).slice(0, 4));
+      return badges;
+    }
+
+    function combatBadges(card) {
+      if (card.name === "Spirit Empress") return ["双形态", "3费地面近战", "6费空中远程"];
+      if (card.name === "Royal Recruits") return ["6人横排", "带盾", "地面", "不防空"];
+      if (card.name === "Goblin Gang") return ["6人单位", "3刀3矛", "含防空"];
+      if (card.name === "Rascals") return ["3人单位", "1男2女", "含防空"];
+      if (card.name === "Guards") return ["3人单位", "带盾", "地面", "不防空"];
+      if (card.type === "Spell") {
+        const badges = [ownHalfOnlySpells.has(card.name) ? "己方半场" : "全场法术"];
+        const area = spellAreas[card.name];
+        if (area?.radius) badges.push(`范围${area.radius}`);
+        if (lineSpells[card.name]) badges.push("路径伤害");
+        return badges;
+      }
+      const badges = [];
+      if (card.type === "Building") {
+        badges.push(card.attacks ? "攻击建筑" : "无攻击建筑");
+        if (card.name === "Elixir Collector") badges.push("产圣水");
+        if (card.spawnEvery > 0) badges.push(`定时出${cardName(card.spawnName)}`);
+        if (card.deathSpawnCount > 0) badges.push(`破裂出${cardName(card.deathSpawnName)}`);
+        if (infernoBeamNames.has(card.name)) badges.push("递增射线");
+      } else {
+        badges.push(card.isAir ? "空中" : "地面");
+      }
+      if (card.attacks) {
+        badges.push(card.isRanged ? "远程" : "近战");
+        badges.push(card.canHitAir ? "可防空" : "不防空");
+      }
+      if (card.isBuildingTargeter) badges.push("只打建筑");
+      if (card.shieldHp > 0) badges.push("带盾");
+      if (groupDeployProfiles[card.name]) badges.push(`${card.count}人单位`);
+      if (card.isSplash) badges.push("范围伤害");
+      return badges;
+    }
+
+    function makeProfile(seed, index) {
+      const type = troopTypeOverrides.has(seed.name)
+        ? "Troop"
+        : index >= spellStart ? "Spell" : index >= buildingStart ? "Building" : "Troop";
+      const isAir = airNames.has(seed.name);
+      const isBuildingTargeter = buildingTargeters.has(seed.name);
+      const count = countMap[seed.name] || 1;
+      const isSwarm = swarmNames.has(seed.name) || count >= 3;
+      const isRanged = rangedNames.has(seed.name) || type === "Building";
+      const isSplash = splashNames.has(seed.name);
+      const costForStats = Math.max(seed.cost, 1);
+      const tankBoost = slowNames.has(seed.name) ? 320 : 0;
+      const swarmPenalty = isSwarm ? Math.min(170, count * 16) : 0;
+      const buildingBoost = type === "Building" ? 360 : 0;
+      const hp = Math.round(costForStats * 255 + rarityBonus[seed.rarity] + tankBoost + buildingBoost - swarmPenalty);
+      let damage = Math.round(costForStats * 78 + rarityBonus[seed.rarity] * 0.45);
+      if (highDpsNames.has(seed.name)) damage = Math.round(damage * 1.55);
+      if (isSwarm) damage = Math.round(damage * 1.16);
+      if (isSplash) damage = Math.round(damage * 0.86);
+      if (isBuildingTargeter) damage = Math.round(damage * 1.05);
+      let range = isRanged ? 3.1 : 0.9;
+      if (["Princess", "Magic Archer", "Dart Goblin", "Firecracker", "X-Bow", "Mortar"].includes(seed.name)) range = seed.name === "X-Bow" ? 8.4 : seed.name === "Mortar" ? 8.0 : 4.7;
+      if (["Inferno Tower", "Tesla"].includes(seed.name)) range = 4.4;
+      if (seed.name === "Cannon") range = 3.8;
+      if (diesOnAttackNames.has(seed.name)) range = seed.name === "Skeleton Barrel" ? 0.9 : 1.25;
+      const speed = type === "Building" ? 0 : slowNames.has(seed.name) ? 0.72 : fastNames.has(seed.name) ? 1.55 : 1.05;
+      const attacks = type !== "Spell" && !noAttackBuildings.has(seed.name);
+      const canHitAir = type === "Spell" || airHitOverrides.has(seed.name) || (type === "Building" ? buildingAirAttackers.has(seed.name) : !isBuildingTargeter && (isAir || isRanged));
+      const canHitGround = type !== "Building" || attacks;
+      const spawner = spawnerProfiles[seed.name] || {};
+      const shieldHp = shieldedNames.has(seed.name) ? Math.max(120, Math.round(hp / Math.max(1, count) * 0.7)) : 0;
+      return {
+        ...seed,
+        type,
+        count,
+        isAir,
+        isRanged,
+        isSplash,
+        isSwarm,
+        isBuildingTargeter,
+        isWinCondition: winConditions.has(seed.name),
+        diesOnAttack: diesOnAttackNames.has(seed.name),
+        canHitAir,
+        canHitGround,
+        hp: Math.max(90, hp),
+        damage: Math.max(35, damage),
+        range,
+        speed,
+        attacks,
+        spawnEvery: spawner.spawnEvery || 0,
+        spawnName: spawner.spawnName || "",
+        spawnCount: spawner.spawnCount || 0,
+        deathSpawnName: spawner.deathSpawnName || "",
+        deathSpawnCount: spawner.deathSpawnCount || 0,
+        buildingLife: spawner.life || 14,
+        shieldHp
+      };
+    }
+
+    let selectedDeck = [];
+    let selectedEnemyHumanDeck = [];
+    let gameMode = "ai";
+    let aiDifficulty = "normal";
+    let editingSide = "player";
+    let state = null;
+    let selectedHandIndex = { player: null, enemy: null };
+    let boardActiveSide = "player";
+    let autoTimer = null;
+    const DEMO_SPEEDS = [
+      { label: "0.5x", delay: 1600 },
+      { label: "0.75x", delay: 1100 },
+      { label: "1x", delay: 750 },
+      { label: "1.5x", delay: 450 },
+      { label: "2x", delay: 260 }
+    ];
+    const DOUBLE_ELIXIR_START = 120;
+    const TRIPLE_ELIXIR_START = 240;
+    const MATCH_END = 300;
+    const SUDDEN_DEATH_START = 180;
+    const COUNTDOWN_180_START = SUDDEN_DEATH_START - 10;
+    const FINAL_COUNTDOWN_START = 290;
+    const AI_DIFFICULTIES = {
+      easy: {
+        label: "简单",
+        hint: "电脑会随机出牌，偶尔存圣水，防守和预判都比较松。"
+      },
+      normal: {
+        label: "普通",
+        hint: "电脑使用当前的基础评分，会按空军、坦克、杂毛等威胁做普通应对。"
+      },
+      hard: {
+        label: "困难",
+        hint: "电脑会识别卡组类型、记住你打过的牌、预判手牌威胁，并按职业对局常见思路选择防守和反打。"
+      },
+      pharaoh: {
+        label: "法老",
+        hint: "终极地狱难度：会优先挑克制玩家卡组的热门套牌，并以 Mohamed Light 式资源管理推断轮转、抓关键窗口、最低成本防守和终局斩杀。"
+      }
+    };
+
+    const el = id => document.getElementById(id);
+
+    function typeLabel(type) {
+      return type === "Troop" ? "军队" : type === "Building" ? "建筑" : "法术";
+    }
+
+    function phaseInfo(time) {
+      if (time >= TRIPLE_ELIXIR_START) return { name: "三倍", seconds: 1 };
+      if (time >= DOUBLE_ELIXIR_START) return { name: "双倍", seconds: 2 };
+      return { name: "单倍", seconds: 3 };
+    }
+
+    function shuffle(list) {
+      const copy = [...list];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function weightedDeck() {
+      const bag = [];
+      META_DECKS.forEach(deck => {
+        for (let i = 0; i < deck.weight; i++) bag.push(deck);
+      });
+      return bag[Math.floor(Math.random() * bag.length)];
+    }
+
+    function analyzeDeck(names) {
+      const setNames = new Set(names);
+      const cards = names.map(name => cardByName.get(name)).filter(Boolean);
+      const avgCost = cards.reduce((sum, card) => sum + card.cost, 0) / Math.max(1, cards.length);
+      const wincons = cards.filter(card => card.isWinCondition).map(card => card.name);
+      const spells = cards.filter(card => card.type === "Spell").map(card => card.name);
+      const buildings = cards.filter(card => card.type === "Building").map(card => card.name);
+      const swarmCount = cards.filter(card => card.isSwarm || groupDeployProfiles[card.name]).length;
+      const airCount = cards.filter(card => card.isAir || card.canHitAir).length;
+      let name = "均衡控制";
+      if (setNames.has("Goblin Barrel") || setNames.has("Princess")) name = "诱饵消耗";
+      else if (setNames.has("X-Bow") || setNames.has("Mortar")) name = "攻城建筑";
+      else if (setNames.has("Golem") || setNames.has("Lava Hound") || setNames.has("Goblin Giant")) name = "大型推进";
+      else if (setNames.has("Graveyard")) name = "墓园控制";
+      else if (wincons.some(card => ["Hog Rider", "Battle Ram", "Ram Rider", "Royal Hogs", "Wall Breakers"].includes(card))) name = avgCost <= 3.4 ? "速转突袭" : "桥头推进";
+      else if (avgCost <= 3.1) name = "速转控制";
+      return { name, avgCost, wincons, spells, buildings, swarmCount, airCount };
+    }
+
+    function activeSetupDeck() {
+      return editingSide === "enemy" ? selectedEnemyHumanDeck : selectedDeck;
+    }
+
+    function setActiveSetupDeck(deck) {
+      if (editingSide === "enemy") selectedEnemyHumanDeck = deck;
+      else selectedDeck = deck;
+      saveSetup();
+    }
+
+    function saveSetup() {
+      localStorage.setItem("textRoyaleDeck", JSON.stringify(selectedDeck));
+      localStorage.setItem("textRoyaleDeckB", JSON.stringify(selectedEnemyHumanDeck));
+      localStorage.setItem("textRoyaleMode", gameMode);
+      localStorage.setItem("textRoyaleDifficulty", aiDifficulty);
+    }
+
+    function setupSideLabel(side) {
+      if (gameMode === "demo") return side === "player" ? "电脑A" : "电脑B";
+      if (side === "player") return gameMode === "duel" ? "玩家A" : "你";
+      return gameMode === "duel" ? "玩家B" : "电脑";
+    }
+
+    function isSinglePlayerSetupMode() {
+      return gameMode === "ai" || gameMode === "touchdown";
+    }
+
+    function renderSetup() {
+      if (isSinglePlayerSetupMode() && editingSide === "enemy") editingSide = "player";
+      const deck = activeSetupDeck();
+      const q = el("searchInput").value.trim().toLowerCase();
+      const type = el("typeFilter").value;
+      const cost = el("costFilter").value;
+      const filtered = CARDS.filter(card => {
+        if (q && !`${card.name} ${card.zh}`.toLowerCase().includes(q)) return false;
+        if (type !== "all" && card.type !== type) return false;
+        if (cost !== "all") {
+          const [min, max] = cost.split("-").map(Number);
+          const costs = card.name === "Spirit Empress" ? [3, 6] : [card.cost];
+          if (!costs.some(value => value >= min && value <= max)) return false;
+        }
+        return true;
+      });
+
+      el("cardList").innerHTML = filtered.map(card => {
+        const picked = deck.includes(card.name);
+        return `
+          <button class="card-tile ${picked ? "selected" : ""} ${picked && editingSide === "enemy" ? "enemy-selected" : ""}" data-card="${card.name}">
+              <span class="cost">${card.name === "Spirit Empress" ? "3/6" : card.cost}</span>
+            <span>
+              <span class="card-name">${card.zh}</span>
+              <span class="card-meta">
+                ${setupBadges(card).map(label => `<span class="mini-badge">${label}</span>`).join("")}
+              </span>
+            </span>
+          </button>
+        `;
+      }).join("");
+
+      const ready = isSinglePlayerSetupMode() ? selectedDeck.length === 8 : selectedDeck.length === 8 && selectedEnemyHumanDeck.length === 8;
+      el("deckPanelTitle").textContent = isSinglePlayerSetupMode() ? "你的 8 张卡" : `${setupSideLabel(editingSide)}的 8 张卡`;
+      el("deckCount").textContent = `${deck.length} / 8`;
+      el("startBtn").disabled = !ready;
+      el("startBtn").textContent = gameMode === "ai" ? "开始人机对战" : gameMode === "demo" ? "开始电脑演示" : gameMode === "touchdown" ? "开始达阵模式" : "开始同屏双人对战";
+      el("editorTabs").style.display = isSinglePlayerSetupMode() ? "none" : "grid";
+      el("difficultyRow").style.display = gameMode === "ai" ? "grid" : "none";
+      el("difficultyHint").style.display = gameMode === "ai" ? "block" : "none";
+      el("difficultyHint").textContent = gameMode === "ai" ? AI_DIFFICULTIES[aiDifficulty].hint : "";
+      el("difficultyRow").querySelectorAll("[data-difficulty]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.difficulty === aiDifficulty);
+      });
+      el("modeRow").querySelectorAll("[data-mode]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.mode === gameMode);
+      });
+      el("editorTabs").querySelectorAll("[data-edit-side]").forEach(btn => {
+        const active = btn.dataset.editSide === editingSide;
+        btn.classList.toggle("active", active && editingSide === "player");
+        btn.classList.toggle("enemy-active", active && editingSide === "enemy");
+        const count = btn.dataset.editSide === "player" ? selectedDeck.length : selectedEnemyHumanDeck.length;
+        const label = gameMode === "demo"
+          ? (btn.dataset.editSide === "player" ? "编辑电脑A" : "编辑电脑B")
+          : (btn.dataset.editSide === "player" ? "编辑玩家A" : "编辑玩家B");
+        btn.textContent = `${label} (${count}/8)`;
+      });
+      el("deckSlots").innerHTML = Array.from({ length: 8 }, (_, i) => {
+        const name = deck[i];
+        if (!name) return `<div class="slot empty"><span class="cost">?</span><span>选择第 ${i + 1} 张卡</span><span></span></div>`;
+        const card = cardByName.get(name);
+        return `
+          <div class="slot">
+            <span class="cost">${card.name === "Spirit Empress" ? "3/6" : card.cost}</span>
+            <span><strong>${card.zh}</strong><br><span class="card-meta">${setupBadges(card).slice(0, 5).join(" · ")}</span></span>
+            <button class="secondary danger" data-remove="${card.name}">移除</button>
+          </div>
+        `;
+      }).join("");
+      el("topPills").innerHTML = `
+        <span class="pill">完整基础卡池：${CARDS.length} 张</span>
+        <span class="pill">${isSinglePlayerSetupMode() ? (gameMode === "touchdown" ? "达阵：先赢 3 局" : `电脑难度：${AI_DIFFICULTIES[aiDifficulty].label} · 热门卡组：${META_DECKS.length} 套`) : `${setupSideLabel("player")}：${selectedDeck.length}/8 · ${setupSideLabel("enemy")}：${selectedEnemyHumanDeck.length}/8`}</span>
+        <span class="pill">离线单文件</span>
+      `;
+    }
+
+    function toggleCard(name) {
+      const deck = activeSetupDeck();
+      let nextDeck;
+      if (deck.includes(name)) {
+        nextDeck = deck.filter(card => card !== name);
+      } else if (deck.length < 8) {
+        nextDeck = [...deck, name];
+      } else {
+        nextDeck = deck;
+      }
+      setActiveSetupDeck(nextDeck);
+      renderSetup();
+    }
+
+    function randomBalancedDeck() {
+      const templates = [
+        ["Hog Rider", "Fireball", "The Log", "Musketeer", "Cannon", "Skeletons", "Ice Spirit", "Valkyrie"],
+        ["Goblin Barrel", "Knight", "Rocket", "Princess", "Goblin Gang", "Ice Spirit", "The Log", "Inferno Tower"],
+        ["Giant", "Graveyard", "Bowler", "Minions", "Mini P.E.K.K.A", "Witch", "Giant Snowball", "Vines"]
+      ];
+      const pick = templates[editingSide === "enemy" ? 1 : Math.floor(Math.random() * templates.length)];
+      setActiveSetupDeck(pick.filter(name => cardByName.has(name)).slice(0, 8));
+      renderSetup();
+    }
+
+    function chooseComputerDeck() {
+      if (gameMode === "ai" && aiDifficulty === "pharaoh") return choosePharaohMetaDeck(selectedDeck);
+      return weightedDeck();
+    }
+
+    function choosePharaohMetaDeck(playerNames) {
+      const playerCards = playerNames.map(name => cardByName.get(name)).filter(Boolean);
+      const playerAir = playerCards.filter(card => card.isAir).length;
+      const playerSwarm = playerCards.filter(card => card.isSwarm || groupDeployProfiles[card.name]).length;
+      const playerTankOrWincon = playerCards.filter(card => card.isWinCondition || (card.hp || 0) >= 1300).length;
+      const playerBuildings = playerCards.filter(card => card.type === "Building").length;
+      const scored = META_DECKS.map(deck => {
+        const cards = deck.cards.map(name => cardByName.get(name)).filter(Boolean);
+        const strategy = analyzeDeck(deck.cards);
+        const antiAir = cards.filter(card => card.canHitAir && card.type !== "Spell").length;
+        const buildings = cards.filter(card => card.type === "Building").length;
+        const highDps = cards.filter(card => highDpsNames.has(card.name)).length;
+        const splash = cards.filter(card => card.isSplash).length;
+        const smallSpells = cards.filter(card => ["The Log", "Arrows", "Zap", "Giant Snowball", "Barbarian Barrel"].includes(card.name)).length;
+        const buildingPunish = cards.filter(card => ["Earthquake", "Lightning", "Rocket", "Fireball", "Poison"].includes(card.name)).length;
+        let score = deck.weight * 3;
+        if (playerAir >= 2) score += antiAir * 12;
+        if (playerSwarm >= 2) score += splash * 11 + smallSpells * 8;
+        if (playerTankOrWincon >= 2) score += buildings * 13 + highDps * 12;
+        if (playerBuildings) score += buildingPunish * 10;
+        if (strategy.avgCost <= 3.5) score += 9;
+        if (strategy.name.includes("速转") || strategy.name.includes("诱饵") || strategy.name.includes("皇家巨人")) score += 8;
+        score += Math.random() * 4;
+        return { deck, score };
+      }).sort((a, b) => b.score - a.score);
+      return scored[0]?.deck || weightedDeck();
+    }
+
+    function startBattle() {
+      const enemyDeck = gameMode === "ai" || gameMode === "touchdown"
+        ? chooseComputerDeck()
+        : { name: gameMode === "demo" ? "电脑B自选卡组" : "玩家B自选卡组", source: gameMode === "demo" ? "电脑演示" : "本机双人", weight: 1, cards: selectedEnemyHumanDeck };
+      const playerCards = selectedDeck.map(name => cardByName.get(name));
+      const enemyCards = enemyDeck.cards.map(name => cardByName.get(name)).filter(Boolean);
+      state = {
+        mode: gameMode,
+        turn: 1,
+        time: 0,
+        playerElixir: 5,
+        enemyElixir: 5,
+        playerCycle: shuffle(playerCards),
+        enemyCycle: shuffle(enemyCards),
+        playerLast: null,
+        enemyLast: null,
+        selectedEnemyDeck: enemyDeck,
+        aiDifficulty: gameMode === "ai" ? aiDifficulty : "normal",
+        playerDeckNames: [...selectedDeck],
+        enemyDeckNames: [...enemyDeck.cards],
+        aiStrategy: gameMode === "ai" ? analyzeDeck(enemyDeck.cards) : null,
+        playerStrategy: analyzeDeck(selectedDeck),
+        playerPlayedCounts: {},
+        enemyPlayedCounts: {},
+        playerPlayedHistory: [],
+        enemyPlayedHistory: [],
+        pharaohNote: "",
+        danmaku: null,
+        countdownFlags: { before180: false, suddenDeath: false, final10: false },
+        units: [],
+        effects: [],
+        nextId: 1,
+        gameOver: false,
+        auto: false,
+        demoPaused: false,
+        demoSpeedIndex: 2,
+        touchdown: gameMode === "touchdown" ? { playerScore: 0, enemyScore: 0, round: 1, neutralMin: 8, neutralMax: 12, targetScore: 3 } : null,
+        mapMessage: "选中手牌后，可以直接点击棋盘格下牌；下面五个快捷位置仍然可用。",
+        pendingActions: { player: false, enemy: gameMode === "ai" || gameMode === "touchdown" },
+        towers: {
+          player: {
+            king: tower("player", "K", "M", 19),
+            left: tower("player", "L公主", "L", 17),
+            right: tower("player", "R公主", "R", 17)
+          },
+          enemy: {
+            king: tower("enemy", "K", "M", 1),
+            left: tower("enemy", "L公主", "L", 3),
+            right: tower("enemy", "R公主", "R", 3)
+          }
+        },
+        log: []
+      };
+      selectedHandIndex = { player: null, enemy: null };
+      boardActiveSide = "player";
+      if (gameMode === "ai") {
+        log(`电脑选择了热门卡组「${enemyDeck.name}」：${cardListText(enemyDeck.cards)}。难度：${AI_DIFFICULTIES[state.aiDifficulty].label}；策略倾向：${state.aiStrategy.name}。`);
+      } else if (gameMode === "touchdown") {
+        state.mapMessage = "达阵模式：双方只能在己方可下牌区部署；单位越过对方底线得一局，先到 3 局获胜。";
+        log(`达阵模式开始：电脑选择了热门卡组「${enemyDeck.name}」。中央禁区不能下牌，先赢 3 局。`);
+      } else if (gameMode === "demo") {
+        state.mapMessage = "演示模式正在自动进行；可以暂停、加速或减速。";
+        log(`演示模式开始：电脑A「${cardListText(selectedDeck)}」对战电脑B「${cardListText(enemyDeck.cards)}」。`);
+      } else {
+        log("同屏双人开始：玩家A对战玩家B。双方都提交行动后才会结算本回合。");
+      }
+      showScreen("battle");
+      renderBattle();
+      if (gameMode === "demo") startDemoLoop();
+    }
+
+    function tower(side, name, lane, pos, hp) {
+      const profile = towerProfile(name);
+      const maxHp = hp || profile.hp;
+      return {
+        kind: "tower",
+        side,
+        name,
+        lane,
+        pos,
+        hp: maxHp,
+        maxHp,
+        damage: profile.damage,
+        dps: profile.dps,
+        hitSpeed: profile.hitSpeed,
+        range: profile.range,
+        active: name !== "K",
+        activeTurn: name === "K" ? Infinity : 1,
+        isAir: false,
+        canHitAir: true,
+        canHitGround: true
+      };
+    }
+
+    function towerProfile(name) {
+      return name === "K" ? TOWER_BALANCE.king : TOWER_BALANCE.princess;
+    }
+
+    function showScreen(name) {
+      el("setupScreen").classList.toggle("active", name === "setup");
+      el("battleScreen").classList.toggle("active", name === "battle");
+    }
+
+    function hand(side) {
+      const cycle = side === "player" ? state.playerCycle : state.enemyCycle;
+      return cycle.slice(0, 4);
+    }
+
+    function elixirKey(side) {
+      return side === "player" ? "playerElixir" : "enemyElixir";
+    }
+
+    function rotateCycle(side, index) {
+      const cycle = side === "player" ? state.playerCycle : state.enemyCycle;
+      const [card] = cycle.splice(index, 1);
+      cycle.push(card);
+      return card;
+    }
+
+    function currentCost(card, side) {
+      if (card.name === "Spirit Empress") return spiritEmpressForm(card, side).cost;
+      if (card.name !== "Mirror") return card.cost;
+      const last = side === "player" ? state.playerLast : state.enemyLast;
+      return last ? Math.min(10, last.cost + 1) : 1;
+    }
+
+    function spiritEmpressForm(card, side) {
+      if (card.name !== "Spirit Empress") return card;
+      const elixir = state ? state[elixirKey(side)] : card.cost;
+      const form = elixir >= SPIRIT_EMPRESS_FORMS.air.cost ? SPIRIT_EMPRESS_FORMS.air : SPIRIT_EMPRESS_FORMS.ground;
+      return {
+        ...card,
+        ...form,
+        zh: cardName(form.name),
+        type: "Troop",
+        hp: form.hp,
+        maxHp: form.hp,
+        damage: Math.round(card.damage * form.damageScale),
+        isSplash: form.name === "Spirit Empress Ground",
+        canHitGround: true,
+        isBuildingTargeter: false,
+        isWinCondition: false,
+        attacks: true,
+        spawnEvery: 0,
+        spawnName: "",
+        spawnCount: 0,
+        deathSpawnName: "",
+        deathSpawnCount: 0,
+        buildingLife: 0
+      };
+    }
+
+    function displayCard(card, side) {
+      if (card.name === "Spirit Empress") return spiritEmpressForm(card, side);
+      return card;
+    }
+
+    function playableCard(card, side) {
+      return spiritEmpressForm(mirroredCard(card, side), side);
+    }
+
+    function renderBattle() {
+      if (!state) return;
+      const phase = phaseInfo(state.time);
+      el("battleGrid").className = `battle-grid ${state.mode}`;
+      el("timeHud").textContent = `${state.time} 秒`;
+      el("phaseHud").textContent = `${phase.name} · 每回合 ${phase.seconds} 秒`;
+      el("playerElixirLabel").textContent = state.mode === "demo" ? "电脑A圣水" : state.mode === "duel" ? "玩家A圣水" : "你的圣水";
+      el("playerElixirHud").textContent = `${state.playerElixir} / 10`;
+      el("enemyHudLabel").textContent = state.mode === "touchdown" ? "电脑圣水" : state.mode === "demo" ? "电脑B圣水" : state.mode === "duel" ? "玩家B圣水" : "电脑卡组";
+      el("enemyDeckHud").textContent = state.mode === "duel" || state.mode === "demo" || state.mode === "touchdown" ? `${state.enemyElixir} / 10` : state.selectedEnemyDeck.name;
+      el("turnHud").textContent = `第 ${state.turn} 回合`;
+      el("playerControlTitle").textContent = state.mode === "demo" ? "电脑A手牌" : state.mode === "duel" ? "玩家A操作盘" : "出牌区";
+      el("enemyControlTitle").textContent = state.mode === "demo" ? "电脑B手牌" : "玩家B操作盘";
+      el("topPills").innerHTML = `
+        <span class="pill">${state.mode === "touchdown" ? touchdownScoreLabel() : `当前规则：${state.time < SUDDEN_DEATH_START ? "国王塔决胜" : "一塔决胜"}`}</span>
+        <span class="pill">场上单位：${state.units.length}</span>
+        <span class="pill">${state.mode === "ai" ? `电脑：${AI_DIFFICULTIES[state.aiDifficulty].label} · ${state.aiStrategy.name}${state.aiDifficulty === "pharaoh" && state.pharaohNote ? ` · ${state.pharaohNote}` : ""}` : state.mode === "touchdown" ? `电脑圣水：${state.enemyElixir} / 10` : state.mode === "demo" ? demoStatusLabel() : state.mode === "duel" ? pendingLabel() : `电脑圣水：${state.enemyElixir} / 10`}</span>
+      `;
+      renderTowers();
+      renderControls("player");
+      renderControls("enemy");
+      renderMap();
+      renderLog();
+    }
+
+    function towerPercent(t) {
+      return Math.max(0, Math.round((t.hp / t.maxHp) * 100));
+    }
+
+    function renderTowers() {
+      if (state.mode === "touchdown") {
+        const td = state.touchdown;
+        el("towerStrip").innerHTML = `
+          <div class="tower-box player">
+            <strong>${sideName("player")}</strong>
+            <div style="margin-top:8px">达阵局数：${td.playerScore} / ${td.targetScore}</div>
+            <div class="bar"><span style="width:${Math.round((td.playerScore / td.targetScore) * 100)}%"></span></div>
+          </div>
+          <div class="tower-box enemy">
+            <strong>${sideName("enemy")}</strong>
+            <div style="margin-top:8px">达阵局数：${td.enemyScore} / ${td.targetScore}</div>
+            <div class="bar"><span style="width:${Math.round((td.enemyScore / td.targetScore) * 100)}%"></span></div>
+          </div>
+        `;
+        return;
+      }
+      const sides = [
+        ["enemy", sideName("enemy")],
+        ["player", sideName("player")]
+      ];
+      el("towerStrip").innerHTML = sides.map(([side, label]) => {
+        const tw = state.towers[side];
+        return `
+          <div class="tower-box ${side}">
+            <strong>${label}</strong>
+            ${["king", "left", "right"].map(k => `
+              <div style="margin-top:8px">
+                ${towerDisplayName(tw[k])}: ${Math.max(0, Math.round(tw[k].hp))} / ${tw[k].maxHp}
+                ${tw[k].name === "K" ? `<span class="mini-badge">${tw[k].active ? "国王塔已激活" : "国王塔未激活"}</span>` : '<span class="mini-badge">公主塔远程攻击</span>'}
+                <div class="bar"><span style="width:${towerPercent(tw[k])}%"></span></div>
+              </div>
+            `).join("")}
+          </div>
+        `;
+      }).join("");
+    }
+
+    function pendingLabel() {
+      if (state.mode !== "duel") return "";
+      const a = state.pendingActions.player ? "玩家A已提交" : "等待玩家A";
+      const b = state.pendingActions.enemy ? "玩家B已提交" : "等待玩家B";
+      return `${a} · ${b}`;
+    }
+
+    function demoStatusLabel() {
+      const speed = DEMO_SPEEDS[state.demoSpeedIndex] || DEMO_SPEEDS[2];
+      return `${state.demoPaused ? "演示已暂停" : "演示进行中"} · 速度 ${speed.label}`;
+    }
+
+    function touchdownScoreLabel() {
+      const td = state.touchdown;
+      return `达阵第 ${td.round} 局 · ${sideName("player")} ${td.playerScore} : ${td.enemyScore} ${sideName("enemy")}`;
+    }
+
+    function renderControls(side) {
+      const selectedIndex = selectedHandIndex[side];
+      const submitted = state.mode === "demo" ? false : state.pendingActions[side];
+      const elixir = state[elixirKey(side)];
+      const panel = el(`${side}ControlPanel`);
+      panel.classList.toggle("submitted", Boolean(submitted));
+      el(`${side}SelectedHint`).textContent = state.mode === "demo"
+        ? (side === "player" ? "电脑A自动出牌" : "电脑B自动出牌")
+        : submitted
+          ? "本回合已提交"
+          : selectedIndex === null ? "先选一张手牌" : `选择下牌点：${displayCard(hand(side)[selectedIndex], side).zh}`;
+      el(`${side}SideStatus`).innerHTML = `
+        <span>${sideName(side)}圣水</span>
+        <strong>${elixir} / 10</strong>
+        <span>${state.mode === "touchdown" ? "越过对方底线即可拿下一局" : state.mode === "demo" ? demoStatusLabel() : state.mode === "duel" ? (submitted ? "等待对方提交" : "本回合可以出一张牌或存圣水") : `电脑圣水 ${state.enemyElixir} / 10`}</span>
+      `;
+      el(`${side}HandGrid`).innerHTML = hand(side).map((card, index) => {
+        const cost = currentCost(card, side);
+        const shown = displayCard(card, side);
+        const canHumanAct = state.mode === "duel" || ((state.mode === "ai" || state.mode === "touchdown") && side === "player");
+        const affordable = elixir >= cost && !state.gameOver && !submitted && canHumanAct;
+        return `
+          <button class="hand-card ${selectedIndex === index ? "active" : ""}" data-side="${side}" data-hand="${index}" ${affordable ? "" : "disabled"}>
+            <span class="cost">${cost}</span>
+            <span>
+              <span class="card-name">${shown.zh}</span>
+              <span class="card-meta">
+                ${combatBadges(shown).slice(0, 4).map(label => `<span class="mini-badge">${label}</span>`).join("")}
+              </span>
+            </span>
+          </button>
+        `;
+      }).join("");
+      el(`${side}PlacementGrid`).innerHTML = state.mode === "demo"
+        ? ""
+        : PLACEMENTS.map(place => {
+          let disabled = selectedIndex === null || state.gameOver || submitted || (state.mode !== "duel" && side !== "player");
+          if (!disabled) {
+            const row = Math.round(side === "player" ? place.playerPos : place.enemyPos);
+            disabled = !canPlaceAt(side, place.lane, row).ok;
+          }
+          return `<button data-side="${side}" data-place="${place.id}" ${disabled ? "disabled" : ""}>${place.label}</button>`;
+        }).join("");
+      const skipBtn = el(`${side}SkipBtn`);
+      if (skipBtn) {
+        skipBtn.style.display = state.mode === "demo" ? "none" : "inline-flex";
+        skipBtn.disabled = state.gameOver || submitted || (state.mode !== "duel" && side !== "player");
+        skipBtn.textContent = `${sideName(side)}存圣水`;
+      }
+      el("autoBtn").style.display = state.mode === "ai" || state.mode === "demo" ? "inline-flex" : "none";
+      el("autoBtn").textContent = state.mode === "demo" ? (state.demoPaused ? "继续演示" : "暂停演示") : (state.auto ? "自动推进：开" : "自动推进：关");
+      el("demoSlowerBtn").style.display = state.mode === "demo" ? "inline-flex" : "none";
+      el("demoFasterBtn").style.display = state.mode === "demo" ? "inline-flex" : "none";
+      el("demoSlowerBtn").disabled = state.mode !== "demo" || state.demoSpeedIndex <= 0;
+      el("demoFasterBtn").disabled = state.mode !== "demo" || state.demoSpeedIndex >= DEMO_SPEEDS.length - 1;
+    }
+
+    function renderMap() {
+      const rows = [];
+      const colWidth = state.mode === "duel" || state.mode === "touchdown" ? 12 : 15;
+      const border = "─".repeat(colWidth);
+      rows.push(`${"".padEnd(6)}${LANES.map(lane => fitText(lane.label, colWidth)).join("  ")}`);
+      rows.push(`  ┌${[border, border, border, border].join("┬")}┐`);
+      for (let row = 0; row <= 20; row++) {
+        const marker = touchdownRowMarker(row) || (row === 10 ? "河" : row === 0 ? "敌" : row === 20 ? "我" : String(row).padStart(2, "0"));
+        const body = LANES.map(lane => fitText(cell(row, lane.id), colWidth)).join("│");
+        rows.push(`${marker}│${body}│`);
+        if (state.mode !== "touchdown" && row === 10) rows.push(`  ├${fitText("左桥", colWidth, "─")}┼${fitText("河道", colWidth, "─")}┼${fitText("河道", colWidth, "─")}┼${fitText("右桥", colWidth, "─")}┤`);
+      }
+      rows.push(`  └${[border, border, border, border].join("┴")}┘`);
+      rows.push("");
+      rows.push(state.mode === "touchdown"
+        ? "底=达阵底线 禁=中央禁区。没有塔、没有河、没有桥；双方只能在己方可下牌区部署。"
+        : state.mode === "demo"
+        ? "甲=电脑A 乙=电脑B 塔=防御塔 筑=建筑 空=空军。中左走左桥，中右走右桥。"
+        : state.mode === "duel"
+          ? "甲=玩家A 乙=玩家B 塔=防御塔 筑=建筑 空=空军。中左走左桥，中右走右桥。"
+          : `我=${sideName("player")} 敌=${sideName("enemy")} 塔=防御塔 筑=建筑 空=空军。普通地面单位只能走桥，空军和跳河单位可以越河。`);
+      el("arenaMap").textContent = rows.join("\n");
+      renderBoard();
+      renderMapHint();
+      renderDanmaku();
+    }
+
+    function touchdownRowMarker(row) {
+      if (state.mode !== "touchdown") return "";
+      if (row === 0 || row === 20) return "底";
+      if (isTouchdownNeutralRow(row)) return "禁";
+      return "";
+    }
+
+    function renderMapHint() {
+      const side = selectedBoardSide();
+      const idx = selectedHandIndex[side];
+      const picked = idx === null ? "" : `当前棋盘落点：${sideName(side)}的 ${hand(side)[idx].zh}`;
+      el("mapHint").innerHTML = `
+        <span>${state.mapMessage || "选中手牌后，点击棋盘格即可下牌。"}</span>
+        <strong>${picked}</strong>
+      `;
+    }
+
+    function renderDanmaku() {
+      const node = el("arenaDanmaku");
+      const message = state.danmaku;
+      if (!message || state.turn > message.expiresTurn) {
+        node.classList.remove("active");
+        node.textContent = "";
+        return;
+      }
+      if (node.dataset.key !== message.key) {
+        node.dataset.key = message.key;
+        node.classList.remove("active");
+        void node.offsetWidth;
+      }
+      node.textContent = message.text;
+      node.classList.add("active");
+    }
+
+    function showDanmaku(text) {
+      if (!state) return;
+      state.danmaku = {
+        text,
+        key: `${state.turn}-${state.time}-${text}`,
+        expiresTurn: state.turn + 1
+      };
+    }
+
+    function renderBoard() {
+      const side = selectedBoardSide();
+      const legalSide = canUseBoardSide(side);
+      const cells = [];
+      LANES.forEach(lane => cells.push(`<div class="lane-head">${lane.label}</div>`));
+      for (let row = 0; row <= 20; row++) {
+        LANES.forEach(lane => {
+          const result = legalSide ? canPlaceAt(side, lane.id, row) : { ok: false };
+          const marker = rowMarker(row, lane.id);
+          const items = cellItems(row, lane.id).map(item => `<span class="cell-item ${item.className}">${item.text}</span>`).join("");
+          cells.push(`
+            <button class="arena-cell ${riverClass(row, lane.id)} ${result.ok ? "legal" : ""}"
+              data-board-row="${row}" data-board-lane="${lane.id}"
+              aria-label="${lane.label}第${row}行${result.ok ? "，可下牌" : ""}">
+              <span class="row-mark">${marker}</span>
+              <span class="cell-stack">${items}</span>
+            </button>
+          `);
+        });
+      }
+      el("arenaBoard").innerHTML = cells.join("");
+    }
+
+    function rowMarker(row, lane) {
+      if (state.mode === "touchdown") {
+        if (row === 0 || row === 20) return "底";
+        if (isTouchdownNeutralRow(row)) return "禁";
+        return String(row).padStart(2, "0");
+      }
+      if (row === 10) return isBridgeLane(lane) ? "桥" : "河";
+      if (row === 0) return "敌";
+      if (row === 20) return "我";
+      return String(row).padStart(2, "0");
+    }
+
+    function riverClass(row, lane) {
+      if (state.mode === "touchdown") {
+        if (row === 0 || row === 20) return "goal";
+        if (isTouchdownNeutralRow(row)) return "neutral";
+        return "";
+      }
+      if (row !== 10) return "";
+      return isBridgeLane(lane) ? "bridge" : "river";
+    }
+
+    function isTouchdownNeutralRow(row) {
+      if (!state || state.mode !== "touchdown") return false;
+      return row >= state.touchdown.neutralMin && row <= state.touchdown.neutralMax;
+    }
+
+    function isBridgeLane(lane) {
+      return lane === "L" || lane === "R";
+    }
+
+    function isRiverLane(lane) {
+      return lane === "ML" || lane === "MR" || lane === "M";
+    }
+
+    function laneOccupiesCell(itemLane, cellLane) {
+      return itemLane === cellLane || (itemLane === "M" && (cellLane === "ML" || cellLane === "MR"));
+    }
+
+    function cell(row, lane) {
+      return cellItems(row, lane).map(item => item.text).slice(0, 2).join(" ");
+    }
+
+    function cellItems(row, lane) {
+      const parts = [];
+      const towers = state.mode === "touchdown" ? [] : [state.towers.enemy.king, state.towers.enemy.left, state.towers.enemy.right, state.towers.player.king, state.towers.player.left, state.towers.player.right];
+      towers.forEach(t => {
+        if (Math.round(t.pos) === row && laneOccupiesCell(t.lane, lane) && t.hp > 0) {
+          parts.push({ className: `tower ${t.side}`, text: `${mapSide(t.side)}塔:${towerMapName(t)}` });
+        }
+      });
+      state.units.forEach(unit => {
+        if (Math.round(unit.pos) === row && laneOccupiesCell(unit.lane, lane) && unit.hp > 0) {
+          const kind = unit.type === "Building" ? "筑" : unit.isAir ? "空" : unit.jumping > 0 ? "跃" : unit.shield > 0 ? "盾" : "";
+          parts.push({ className: unit.side, text: `${mapSide(unit.side)}${kind}:${cardName(unit.name)}` });
+        }
+      });
+      state.effects.forEach(effect => {
+        if (effect.kind === "beam" && beamCoversCell(effect, row, lane)) {
+          parts.push({ className: "beam", text: "线:地狱" });
+        }
+      });
+      return parts.slice(0, 2);
+    }
+
+    function beamCoversCell(effect, row, lane) {
+      const minRow = Math.min(effect.fromPos, effect.toPos);
+      const maxRow = Math.max(effect.fromPos, effect.toPos);
+      if (row < Math.floor(minRow) || row > Math.ceil(maxRow)) return false;
+      const span = Math.max(0.01, effect.toPos - effect.fromPos);
+      const ratio = (row - effect.fromPos) / span;
+      const projectedLane = laneIndex(effect.fromLane) + (laneIndex(effect.toLane) - laneIndex(effect.fromLane)) * Math.max(0, Math.min(1, ratio));
+      return Math.abs(laneIndex(lane) - projectedLane) <= 0.55;
+    }
+
+    function mapSide(side) {
+      if (state.mode === "duel" || state.mode === "demo") return side === "player" ? "甲" : "乙";
+      return side === "player" ? "我" : "敌";
+    }
+
+    function displayWidth(text) {
+      return Array.from(String(text)).reduce((width, char) => width + (char.charCodeAt(0) <= 255 ? 1 : 2), 0);
+    }
+
+    function fitText(text, width, fill = " ") {
+      let out = "";
+      let used = 0;
+      for (const char of String(text)) {
+        const charWidth = char.charCodeAt(0) <= 255 ? 1 : 2;
+        if (used + charWidth > width) {
+          if (width >= 2) {
+            while (displayWidth(out) > width - 2) out = Array.from(out).slice(0, -1).join("");
+            out += "…";
+          }
+          break;
+        }
+        out += char;
+        used += charWidth;
+      }
+      const pad = Math.max(0, width - displayWidth(out));
+      return out + fill.repeat(pad);
+    }
+
+    function towerMapName(towerObj) {
+      if (towerObj.name === "L公主") return "左塔";
+      if (towerObj.name === "R公主") return "右塔";
+      return "国王";
+    }
+
+    function towerDisplayName(towerObj) {
+      if (towerObj.name === "K") return "国王塔";
+      if (towerObj.name === "L公主") return "左公主塔";
+      if (towerObj.name === "R公主") return "右公主塔";
+      return towerObj.name;
+    }
+
+    function renderLog() {
+      el("battleLog").innerHTML = state.log.slice(0, 80).map(entry => `<div class="log-entry">${entry}</div>`).join("");
+    }
+
+    function log(text) {
+      state.log.unshift(`T${state.turn} · ${text}`);
+    }
+
+    function selectHand(side, index) {
+      if (state.mode === "demo") return;
+      if (state.pendingActions[side]) return;
+      const card = hand(side)[index];
+      if (!card || state[elixirKey(side)] < currentCost(card, side)) return;
+      const shown = displayCard(card, side);
+      selectedHandIndex[side] = index;
+      boardActiveSide = side;
+      state.mapMessage = `${sideName(side)}已选择 ${shown.zh}，可以点棋盘格或使用快捷位置下牌。`;
+      renderBattle();
+    }
+
+    function playSelected(side, placeId) {
+      const place = PLACEMENTS.find(p => p.id === placeId);
+      commitSelectedCard(side, place);
+    }
+
+    function commitSelectedCard(side, place) {
+      if (selectedHandIndex[side] === null || state.gameOver || state.pendingActions[side]) return;
+      if (state.mode !== "duel" && side !== "player") return;
+      const card = hand(side)[selectedHandIndex[side]];
+      const pos = side === "player" ? place.playerPos : place.enemyPos;
+      const legal = canPlaceAt(side, place.lane, Math.round(pos));
+      if (!legal.ok) {
+        state.mapMessage = legal.reason;
+        renderBattle();
+        return;
+      }
+      const actual = playableCard(card, side);
+      const cost = card.name === "Mirror" ? currentCost(card, side) : actual.cost;
+      const key = elixirKey(side);
+      if (state[key] < cost) return;
+      state[key] -= cost;
+      const played = rotateCycle(side, selectedHandIndex[side]);
+      const deployed = deployCard(side, played, place, actual);
+      if (played.name !== "Mirror" && deployed) {
+        if (side === "player") state.playerLast = deployed;
+        else state.enemyLast = deployed;
+      }
+      recordPlayedCard(side, deployed || played);
+      selectedHandIndex[side] = null;
+      state.mapMessage = "选中手牌后，可以直接点击棋盘格下牌；下面五个快捷位置仍然可用。";
+      submitAction(side);
+      renderBattle();
+    }
+
+    function skipTurn(side = "player") {
+      if (state.gameOver || state.pendingActions[side]) return;
+      if (state.mode !== "duel" && side !== "player") return;
+      selectedHandIndex[side] = null;
+      log(`${sideName(side)}选择存圣水，没有下牌。`);
+      submitAction(side);
+      renderBattle();
+    }
+
+    function recordPlayedCard(side, card) {
+      if (!state || !card) return;
+      const key = side === "player" ? "playerPlayedCounts" : "enemyPlayedCounts";
+      if (!state[key]) state[key] = {};
+      state[key][card.name] = (state[key][card.name] || 0) + 1;
+      const historyKey = side === "player" ? "playerPlayedHistory" : "enemyPlayedHistory";
+      if (!state[historyKey]) state[historyKey] = [];
+      state[historyKey].push({ name: card.name, turn: state.turn, cost: card.cost || 0 });
+      if (state[historyKey].length > 18) state[historyKey].shift();
+    }
+
+    function selectedBoardSide() {
+      if (canUseBoardSide(boardActiveSide)) return boardActiveSide;
+      if (canUseBoardSide("player")) return "player";
+      if (canUseBoardSide("enemy")) return "enemy";
+      return boardActiveSide;
+    }
+
+    function canUseBoardSide(side) {
+      return Boolean(
+        state &&
+        !state.gameOver &&
+        (state.mode === "duel" || ((state.mode === "ai" || state.mode === "touchdown") && side === "player")) &&
+        !state.pendingActions[side] &&
+        selectedHandIndex[side] !== null
+      );
+    }
+
+    function canPlaceAt(side, lane, row) {
+      if (!canUseBoardSide(side)) return { ok: false, reason: "先选一张手牌。" };
+      const card = playableCard(hand(side)[selectedHandIndex[side]], side);
+      if (row <= 0 || row >= 20) return { ok: false, reason: "最边缘两行不能下牌。" };
+      const onOwnHalf = isOwnHalf(side, row);
+      if (state.mode === "touchdown") {
+        if (!isTouchdownDeployRow(side, row)) {
+          return { ok: false, reason: "达阵模式只能在己方可下牌区部署；中间大块禁区和底线不能下牌。" };
+        }
+        return { ok: true };
+      }
+      if (card.type === "Spell") {
+        if (!ownHalfOnlySpells.has(card.name) || onOwnHalf) return { ok: true };
+        return { ok: false, reason: `${card.zh}只能放在${sideName(side)}的己方半场。` };
+      }
+      if (row === 10 && isRiverLane(lane) && card.type !== "Building" && !card.isAir && !riverJumpers.has(card.name)) {
+        return { ok: false, reason: "中间是河道；普通地面单位请放到左桥或右桥，空军和跳河单位可以越过。" };
+      }
+      if (row === 10 && isRiverLane(lane) && card.type === "Building") {
+        return { ok: false, reason: "建筑不能放在河道格。" };
+      }
+      if (onOwnHalf) return { ok: true };
+      return {
+        ok: false,
+        reason: card.type === "Building" || card.type === "Troop"
+          ? `${sideName(side)}的军队和建筑只能放在己方半场；大多数法术可全场释放，滚木、滚桶、皇家速递例外。`
+          : "这里不能下这张牌。"
+      };
+    }
+
+    function isOwnHalf(side, row) {
+      return side === "player" ? row >= 10 && row <= 19 : row >= 1 && row <= 10;
+    }
+
+    function isTouchdownDeployRow(side, row) {
+      if (row <= 0 || row >= 20) return false;
+      return side === "player" ? row >= 13 && row <= 19 : row >= 1 && row <= 7;
+    }
+
+    function boardPlace(side, lane, row) {
+      const label = `棋盘：${laneLabel(lane)}第 ${row} 行`;
+      const pos = state.mode !== "touchdown" && row === 10 ? (side === "player" ? 10.8 : 9.2) : row;
+      return {
+        id: `board-${side}-${lane}-${row}`,
+        label,
+        lane,
+        playerPos: pos,
+        enemyPos: pos,
+        kind: "board",
+        custom: true
+      };
+    }
+
+    function laneLabel(lane) {
+      if (lane === "M") return "中线";
+      return LANES.find(item => item.id === lane)?.label || "中线";
+    }
+
+    function playBoardCell(row, lane) {
+      const side = selectedBoardSide();
+      if (!canUseBoardSide(side)) {
+        if (state) state.mapMessage = "先在操作盘选择一张可以支付的手牌，再点击棋盘格下牌。";
+        renderBattle();
+        return;
+      }
+      const result = canPlaceAt(side, lane, row);
+      if (!result.ok) {
+        state.mapMessage = result.reason;
+        renderBattle();
+        return;
+      }
+      commitSelectedCard(side, boardPlace(side, lane, row));
+    }
+
+    function submitAction(side) {
+      if (state.gameOver) return;
+      if (state.mode === "ai" || state.mode === "touchdown") {
+        enemyTurn();
+        if (state.gameOver) return;
+        resolveTurn();
+        advanceClock();
+        return;
+      }
+      state.pendingActions[side] = true;
+      if (state.pendingActions.player && state.pendingActions.enemy) {
+        log("双方行动已提交，开始结算本回合。");
+        resolveTurn({ gainBoth: true });
+        advanceClock();
+        state.pendingActions = { player: false, enemy: false };
+      }
+    }
+
+    function mirroredCard(card, side) {
+      if (card.name !== "Mirror") return card;
+      const last = side === "player" ? state.playerLast : state.enemyLast;
+      return last || cardByName.get("Zap");
+    }
+
+    function deployCard(side, card, place, forcedActual = null) {
+      const actual = forcedActual || playableCard(card, side);
+      const pos = side === "player" ? place.playerPos : place.enemyPos;
+      const lane = place.lane;
+      if (actual.type === "Spell") {
+        castSpell(side, actual, place);
+        log(`${sideName(side)}使用 ${card.name === "Mirror" ? "镜像复制" : ""}${cardName(actual.name)}，位置：${place.label}。`);
+        return actual;
+      }
+      const spawned = deployGroup(side, actual, lane, pos);
+      if (spawned.length) {
+        log(`${sideName(side)}在${place.label}部署 ${cardName(actual.name)}，分成 ${spawned.length} 个单位。`);
+        return actual;
+      }
+      const unit = createUnit(side, actual, lane, pos);
+      state.units.push(unit);
+      if (actual.name === "Elixir Collector") unit.collectorTicks = 5;
+      log(`${sideName(side)}在${place.label}部署 ${cardName(actual.name)}。`);
+      return actual;
+    }
+
+    function deployGroup(side, card, lane, pos) {
+      const profile = groupDeployProfiles[card.name];
+      if (!profile) return [];
+      const entries = [];
+      profile.forEach(part => {
+        for (let i = 0; i < part.count; i++) entries.push(part);
+      });
+      const lanes = groupLanes(card.name, lane, entries.length);
+      return entries.map((part, index) => {
+        const source = cardByName.get(part.name) || virtualCard(part.name);
+        const laneId = lanes[index] || lane;
+        const offset = groupPosOffset(index, entries.length, side, card.name);
+        return spawnUnit(side, part.name, laneId, pos + offset, 1, {
+          count: 1,
+          hp: individualHp(source),
+          damage: individualDamage(source),
+          shieldHp: part.shield || source.shieldHp > 0 ? individualShield(source) : 0,
+          jitter: card.name !== "Royal Recruits"
+        });
+      });
+    }
+
+    function groupLanes(cardNameValue, lane, count) {
+      if (cardNameValue === "Royal Recruits") return ["L", "L", "ML", "MR", "R", "R"];
+      const nearby = lanesAround(lane);
+      return Array.from({ length: count }, (_, index) => nearby[index % nearby.length]);
+    }
+
+    function lanesAround(lane) {
+      if (lane === "L") return ["L", "ML"];
+      if (lane === "R") return ["R", "MR"];
+      if (lane === "ML") return ["ML", "L", "MR"];
+      if (lane === "MR") return ["MR", "R", "ML"];
+      return ["ML", "MR", "L", "R"];
+    }
+
+    function groupPosOffset(index, count, side, cardNameValue) {
+      if (cardNameValue === "Royal Recruits") return 0;
+      const dir = side === "player" ? 1 : -1;
+      return (index - (count - 1) / 2) * 0.18 * dir;
+    }
+
+    function individualHp(card) {
+      return Math.max(45, Math.round(card.hp / Math.max(1, card.count || 1)));
+    }
+
+    function individualDamage(card) {
+      return Math.max(18, Math.round(card.damage / Math.max(1, Math.min(card.count || 1, 4))));
+    }
+
+    function individualShield(card) {
+      return Math.max(70, Math.round((card.shieldHp || individualHp(card) * 0.55)));
+    }
+
+    function sideName(side) {
+      if (state && state.mode === "demo") return side === "player" ? "电脑A" : "电脑B";
+      if (state && state.mode === "duel") return side === "player" ? "玩家A" : "玩家B";
+      return side === "player" ? "你" : "电脑";
+    }
+
+    function createUnit(side, card, lane, pos, overrides = {}) {
+      return {
+        id: state.nextId++,
+        side,
+        name: card.name,
+        type: card.type,
+        lane,
+        pos,
+        hp: overrides.hp || card.hp,
+        maxHp: overrides.hp || card.hp,
+        damage: overrides.damage || card.damage,
+        range: card.range,
+        speed: card.speed,
+        count: overrides.count || card.count,
+        isAir: card.isAir,
+        isRanged: card.isRanged,
+        canHitAir: card.canHitAir,
+        canHitGround: card.canHitGround,
+        isSplash: card.isSplash,
+        isBuildingTargeter: card.isBuildingTargeter,
+        diesOnAttack: card.diesOnAttack,
+        canJumpRiver: riverJumpers.has(card.name),
+        attacks: card.attacks,
+        spawnEvery: card.spawnEvery,
+        frozen: 0,
+        rage: 0,
+        rooted: 0,
+        jumping: 0,
+        slowed: 0,
+        cursed: 0,
+        cursedBy: null,
+        cursedHogBy: null,
+        cursedHogTicks: 0,
+        poisoned: 0,
+        poisonDamage: 0,
+        shield: overrides.shieldHp ?? card.shieldHp ?? 0,
+        maxShield: overrides.shieldHp ?? card.shieldHp ?? 0,
+        impactSpent: false,
+        payloadReleased: false,
+        targetId: null,
+        spawnName: card.spawnName || "",
+        spawnCount: card.spawnCount || 0,
+        deathSpawnName: card.deathSpawnName || "",
+        deathSpawnCount: card.deathSpawnCount || 0,
+        life: card.type === "Building" ? (card.buildingLife || 14) : 0,
+        infernoTargetId: null,
+        infernoCharge: 0
+      };
+    }
+
+    function castSpell(side, card, place) {
+      const enemy = side === "player" ? "enemy" : "player";
+      const friendly = side;
+      const basePos = side === "player" ? place.playerPos : place.enemyPos;
+      const spell = card.name;
+      const ownHalfSpell = ownHalfOnlySpells.has(spell);
+      const defaultOffensive = place.custom
+        ? (side === "player" ? basePos <= 10.5 : basePos >= 9.5)
+        : place.kind === "bridge" || place.kind === "middle";
+      const offensive = !ownHalfSpell && defaultOffensive;
+      const targetPos = place.custom || ownHalfSpell
+        ? basePos
+        : side === "player"
+          ? (offensive ? 3.5 : place.playerPos)
+          : (offensive ? 16.5 : place.enemyPos);
+      const lane = place.custom
+        ? place.lane
+        : ownHalfSpell
+          ? place.lane
+          : place.lane === "M" ? chooseWeakLane(enemy) : place.lane;
+      const area = spellAreas[spell] || { radius: 2.4, towerRatio: towerSpellRatio(spell) };
+
+      if (spell === "Goblin Barrel") {
+        spawnMany(side, "Goblins", lane, place.custom ? targetPos : side === "player" ? 3.2 : 16.8, 3);
+        return;
+      }
+      if (spell === "Graveyard") {
+        spawnMany(side, "Skeletons", lane, place.custom ? targetPos : side === "player" ? 3.2 : 16.8, 5, 0.65);
+        return;
+      }
+      if (spell === "The Log") {
+        rollPathDamage(side, lane, targetPos, spellDamage(spell, card.cost), lineSpells[spell], cardName(spell));
+        return;
+      }
+      if (spell === "Barbarian Barrel") {
+        const endPos = rollPathDamage(side, lane, targetPos, 160, lineSpells[spell], cardName(spell));
+        const barb = createUnit(side, cardByName.get("Barbarians"), lane, endPos, { hp: 430, damage: 115 });
+        barb.count = 1;
+        state.units.push(barb);
+        return;
+      }
+      if (spell === "Royal Delivery") {
+        areaDamage(side, lane, targetPos, 260, { radius: 3.0, knock: 0.35 });
+        const recruit = createUnit(side, cardByName.get("Royal Recruits"), lane, targetPos + (side === "player" ? -0.4 : 0.4), { hp: 720, damage: 145 });
+        recruit.count = 1;
+        state.units.push(recruit);
+        return;
+      }
+      if (spell === "Rage") {
+        areaDamage(side, lane, targetPos, 95, { radius: area.radius });
+        const buffed = buffFriendlyArea(friendly, lane, targetPos, area.radius, unit => {
+          unit.rage = Math.max(unit.rage, 3);
+        });
+        damageTowersInArea(enemy, lane, targetPos, Math.round(95 * area.towerRatio), area.radius, cardName(spell));
+        if (buffed > 0) log(`${sideName(side)}的 ${cardName(spell)} 加速了 ${buffed} 个友方单位。`);
+        return;
+      }
+      if (spell === "Clone") {
+        const radius = 3.0;
+        const clones = state.units
+          .filter(u => u.side === friendly && u.type !== "Building" && u.hp > 0 && areaDistance(lane, targetPos, u.lane, u.pos) <= radius)
+          .slice(0, 5);
+        clones.forEach(u => state.units.push({ ...u, id: state.nextId++, hp: 1, maxHp: 1, damage: Math.round(u.damage * 0.55), name: `${u.name} Clone` }));
+        return;
+      }
+      if (spell === "Freeze") {
+        areaDamage(side, lane, targetPos, 95, { radius: area.radius, freeze: 3 });
+        damageTowersInArea(enemy, lane, targetPos, Math.round(95 * area.towerRatio), area.radius, cardName(spell));
+        return;
+      }
+      if (spell === "Tornado") {
+        const pulled = pullUnits(side, lane, targetPos, area.radius);
+        areaDamage(side, lane, targetPos, 120, { radius: area.radius });
+        damageTowersInArea(enemy, lane, targetPos, Math.round(120 * area.towerRatio), area.radius, cardName(spell));
+        if (pulled > 0) log(`${cardName(spell)}把 ${pulled} 个敌方单位拉向中心。`);
+        return;
+      }
+      if (spell === "Vines") {
+        areaDamage(side, lane, targetPos, 180, { radius: area.radius, root: 2 });
+        damageTowersInArea(enemy, lane, targetPos, Math.round(180 * area.towerRatio), area.radius, cardName(spell));
+        return;
+      }
+      if (spell === "Goblin Curse") {
+        areaDamage(side, lane, targetPos, 55, { radius: area.radius, curse: 5, curseBy: side, poisonTurns: 4, poisonDamage: 45 });
+        damageTowersInArea(enemy, lane, targetPos, Math.round(55 * area.towerRatio), area.radius, cardName(spell));
+        return;
+      }
+      if (spell === "Poison") {
+        areaDamage(side, lane, targetPos, 105, { radius: area.radius, poisonTurns: 4, poisonDamage: 75, slow: 2 });
+        damageTowersInArea(enemy, lane, targetPos, Math.round(spellDamage(spell, card.cost) * area.towerRatio), area.radius, cardName(spell));
+        return;
+      }
+      if (spell === "Lightning") {
+        lightningStrike(side, lane, targetPos, area.radius, spellDamage(spell, card.cost), area.towerRatio);
+        return;
+      }
+      if (spell === "Void") {
+        voidStrike(side, lane, targetPos, area.radius, area.towerRatio);
+        return;
+      }
+
+      const damage = spellDamage(spell, card.cost);
+      areaDamage(side, lane, targetPos, damage, {
+        radius: area.radius,
+        groundOnly: area.groundOnly,
+        buildingBonus: area.buildingBonus,
+        knock: area.knock,
+        stun: area.stun,
+        slow: area.slow
+      });
+      damageTowersInArea(enemy, lane, targetPos, Math.round(damage * area.towerRatio), area.radius, cardName(spell));
+    }
+
+    function spellDamage(name, cost) {
+      const exact = {
+        "Rocket": 760, "Lightning": 560, "Fireball": 430, "Poison": 330, "Arrows": 270,
+        "Earthquake": 290, "The Log": 240, "Zap": 165, "Giant Snowball": 185,
+        "Void": 390, "Royal Delivery": 260, "Freeze": 95, "Tornado": 120, "Rage": 95
+      };
+      return exact[name] || Math.max(90, cost * 115);
+    }
+
+    function towerSpellRatio(name) {
+      if (name === "Rocket") return 0.25;
+      if (name === "Lightning") return 0.27;
+      if (name === "Earthquake") return 0.67;
+      if (name === "The Log") return 0.15;
+      if (name === "Arrows") return 0.25;
+      return 0.30;
+    }
+
+    function areaDamage(side, lane, pos, damage, options = {}) {
+      const radius = options.radius || 2.4;
+      const targets = enemyUnitsInArea(side, lane, pos, radius, options);
+      targets.forEach(unit => {
+        const bonus = options.buildingBonus && unit.type === "Building" ? options.buildingBonus : 1;
+        damageUnit(unit, Math.round(damage * bonus));
+        if (options.knock) knockUnitFrom(unit, pos, options.knock);
+        if (options.stun) unit.frozen = Math.max(unit.frozen, options.stun);
+        if (options.freeze) unit.frozen = Math.max(unit.frozen, options.freeze);
+        if (options.slow) unit.slowed = Math.max(unit.slowed, options.slow);
+        if (options.root) unit.rooted = Math.max(unit.rooted, options.root);
+        if (options.poisonTurns) {
+          unit.poisoned = Math.max(unit.poisoned, options.poisonTurns);
+          unit.poisonDamage = Math.max(unit.poisonDamage || 0, options.poisonDamage || 45);
+        }
+        if (options.curse && unit.type !== "Building") {
+          unit.cursed = Math.max(unit.cursed, options.curse);
+          unit.cursedBy = options.curseBy || side;
+        }
+      });
+      return targets.length;
+    }
+
+    function enemyUnitsInArea(side, lane, pos, radius, options = {}) {
+      const enemy = side === "player" ? "enemy" : "player";
+      return state.units.filter(unit => {
+        if (unit.side !== enemy || unit.hp <= 0) return false;
+        if (options.groundOnly && unit.isAir) return false;
+        return areaDistance(lane, pos, unit.lane, unit.pos) <= radius;
+      });
+    }
+
+    function buffFriendlyArea(side, lane, pos, radius, apply) {
+      let count = 0;
+      state.units.forEach(unit => {
+        if (unit.side !== side || unit.hp <= 0 || unit.type === "Building") return;
+        if (areaDistance(lane, pos, unit.lane, unit.pos) > radius) return;
+        apply(unit);
+        count++;
+      });
+      return count;
+    }
+
+    function damageTowersInArea(side, lane, pos, damage, radius, cause) {
+      if (state.mode === "touchdown") return 0;
+      if (damage <= 0) return 0;
+      const maxTowers = cause === cardName("Tornado") ? 3 : 1;
+      const targets = Object.values(state.towers[side])
+        .filter(towerObj => towerObj.hp > 0)
+        .map(towerObj => ({
+          towerObj,
+          dist: areaDistance(lane, pos, towerObj.lane, towerObj.pos),
+          kingPenalty: towerObj.name === "K" ? 0.35 : 0
+        }))
+        .filter(item => item.dist <= radius)
+        .sort((a, b) => (a.dist + a.kingPenalty) - (b.dist + b.kingPenalty))
+        .slice(0, maxTowers);
+      targets.forEach(({ towerObj }) => {
+        const dealt = Math.max(1, Math.round(damage));
+        damageTower(towerObj, side, dealt, `${cause} ${dealt} 点伤害`);
+      });
+      return targets.length;
+    }
+
+    function rollPathDamage(side, lane, startPos, damage, spec, cause) {
+      const enemy = side === "player" ? "enemy" : "player";
+      const dir = side === "player" ? -1 : 1;
+      const endPos = clampPos(startPos + dir * spec.length);
+      const minPos = Math.min(startPos, endPos);
+      const maxPos = Math.max(startPos, endPos);
+      state.units.forEach(unit => {
+        if (unit.side !== enemy || unit.hp <= 0 || unit.isAir) return;
+        if (unit.pos < minPos || unit.pos > maxPos) return;
+        if (!laneInWidth(lane, unit.lane, spec.width)) return;
+        damageUnit(unit, damage);
+        unit.pos = clampPos(unit.pos + dir * (spec.knock || 0));
+      });
+      damageTowersInPath(enemy, lane, minPos, maxPos, spec.width, Math.round(damage * spec.towerRatio), cause);
+      return endPos;
+    }
+
+    function damageTowersInPath(side, lane, minPos, maxPos, width, damage, cause) {
+      if (state.mode === "touchdown") return 0;
+      if (damage <= 0) return 0;
+      let count = 0;
+      Object.values(state.towers[side]).forEach(towerObj => {
+        if (towerObj.hp <= 0 || towerObj.name === "K") return;
+        if (towerObj.pos < minPos || towerObj.pos > maxPos) return;
+        if (!laneInWidth(lane, towerObj.lane, width)) return;
+        damageTower(towerObj, side, damage, `${cause} ${damage} 点路径伤害`);
+        count++;
+      });
+      return count;
+    }
+
+    function pullUnits(side, lane, pos, radius) {
+      const targets = enemyUnitsInArea(side, lane, pos, radius);
+      targets.forEach(unit => {
+        const delta = pos - unit.pos;
+        const step = Math.max(-2.2, Math.min(2.2, delta * 0.65));
+        unit.pos = clampPos(unit.pos + step);
+        if (lane !== unit.lane && Math.abs(delta) <= radius) unit.lane = lane;
+      });
+      return targets.length;
+    }
+
+    function lightningStrike(side, lane, pos, radius, damage, towerRatio) {
+      const enemy = side === "player" ? "enemy" : "player";
+      const unitTargets = enemyUnitsInArea(side, lane, pos, radius)
+        .map(unit => ({ kind: "unit", hp: unit.hp, unit }));
+      const towerTargets = state.mode === "touchdown" ? [] : Object.values(state.towers[enemy])
+        .filter(towerObj => towerObj.hp > 0 && areaDistance(lane, pos, towerObj.lane, towerObj.pos) <= radius)
+        .map(towerObj => ({ kind: "tower", hp: towerObj.hp, towerObj }));
+      [...unitTargets, ...towerTargets]
+        .sort((a, b) => b.hp - a.hp)
+        .slice(0, 3)
+        .forEach(target => {
+          if (target.kind === "unit") {
+            damageUnit(target.unit, damage);
+            target.unit.frozen = Math.max(target.unit.frozen, 1);
+          } else {
+            const dealt = Math.round(damage * towerRatio);
+            damageTower(target.towerObj, enemy, dealt, `${cardName("Lightning")} ${dealt} 点伤害`);
+          }
+        });
+    }
+
+    function voidStrike(side, lane, pos, radius, towerRatio) {
+      const targets = enemyUnitsInArea(side, lane, pos, radius);
+      const damage = targets.length <= 1 ? 460 : targets.length <= 4 ? 310 : 180;
+      areaDamage(side, lane, pos, damage, { radius });
+      const enemy = side === "player" ? "enemy" : "player";
+      damageTowersInArea(enemy, lane, pos, Math.round(damage * towerRatio), radius, cardName("Void"));
+    }
+
+    function areaDistance(aLane, aPos, bLane, bPos) {
+      const laneGap = Math.abs(laneIndex(aLane) - laneIndex(bLane)) * 2.2;
+      return Math.hypot(aPos - bPos, laneGap);
+    }
+
+    function laneInWidth(sourceLane, targetLane, width) {
+      return Math.abs(laneIndex(sourceLane) - laneIndex(targetLane)) * 1.8 <= width / 2;
+    }
+
+    function laneIndex(lane) {
+      if (lane === "L") return 0;
+      if (lane === "ML") return 1;
+      if (lane === "MR") return 2;
+      if (lane === "R") return 3;
+      return 1.5;
+    }
+
+    function knockUnitFrom(unit, centerPos, amount) {
+      const dir = unit.pos <= centerPos ? -1 : 1;
+      unit.pos = clampPos(unit.pos + dir * amount);
+    }
+
+    function clampPos(pos) {
+      return Math.max(0.5, Math.min(19.5, pos));
+    }
+
+    function spawnMany(side, cardName, lane, pos, amount, scale = 0.75) {
+      const card = cardByName.get(cardName);
+      for (let i = 0; i < amount; i++) {
+        spawnUnit(side, cardName, lane, pos, scale);
+      }
+    }
+
+    function spawnUnit(side, name, lane, pos, scale = 0.75, overrides = {}) {
+      const card = cardByName.get(name) || virtualCard(name);
+      const jitter = overrides.jitter === false ? 0 : (Math.random() - 0.5) * 0.8;
+      const unit = createUnit(side, card, lane, pos + jitter, {
+        hp: overrides.hp || Math.max(45, Math.round(card.hp * scale / Math.max(1, card.count || 1))),
+        damage: overrides.damage || Math.round(card.damage * scale / Math.max(1, Math.min(card.count || 1, 4))),
+        count: overrides.count,
+        shieldHp: overrides.shieldHp
+      });
+      state.units.push(unit);
+      return unit;
+    }
+
+    function virtualCard(name) {
+      if (name === "Cursed Hog") {
+        return {
+          name,
+          zh: cardName(name),
+          cost: 0,
+          rarity: "legendary",
+          type: "Troop",
+          count: 1,
+          isAir: false,
+          isRanged: false,
+          isSplash: false,
+          isSwarm: false,
+          isBuildingTargeter: true,
+          isWinCondition: true,
+          diesOnAttack: false,
+          canHitAir: false,
+          canHitGround: true,
+          hp: 690,
+          damage: 42,
+          range: 0.9,
+          speed: 1.55,
+          attacks: true,
+          spawnEvery: 0,
+          spawnName: "",
+          spawnCount: 0,
+          deathSpawnName: "",
+          deathSpawnCount: 0,
+          buildingLife: 0,
+          shieldHp: 0
+        };
+      }
+      if (name === "Goblin Brawler") {
+        return {
+          name,
+          zh: cardName(name),
+          cost: 0,
+          rarity: "rare",
+          type: "Troop",
+          count: 1,
+          isAir: false,
+          isRanged: false,
+          isSplash: false,
+          isSwarm: false,
+          isBuildingTargeter: false,
+          isWinCondition: false,
+          diesOnAttack: false,
+          canHitAir: false,
+          canHitGround: true,
+          hp: 1150,
+          damage: 210,
+          range: 0.9,
+          speed: 1.05,
+          attacks: true,
+          spawnEvery: 0,
+          spawnName: "",
+          spawnCount: 0,
+          deathSpawnName: "",
+          deathSpawnCount: 0,
+          buildingLife: 0,
+          shieldHp: 0
+        };
+      }
+      if (name === "Rascal Boy" || name === "Rascal Girl") {
+        const girl = name === "Rascal Girl";
+        return {
+          name,
+          zh: cardName(name),
+          cost: 0,
+          rarity: "common",
+          type: "Troop",
+          count: 1,
+          isAir: false,
+          isRanged: girl,
+          isSplash: false,
+          isSwarm: false,
+          isBuildingTargeter: false,
+          isWinCondition: false,
+          diesOnAttack: false,
+          canHitAir: girl,
+          canHitGround: true,
+          hp: girl ? 360 : 1100,
+          damage: girl ? 125 : 150,
+          range: girl ? 3.6 : 0.9,
+          speed: 1.05,
+          attacks: true,
+          spawnEvery: 0,
+          spawnName: "",
+          spawnCount: 0,
+          deathSpawnName: "",
+          deathSpawnCount: 0,
+          buildingLife: 0,
+          shieldHp: 0
+        };
+      }
+      return cardByName.get("Goblins");
+    }
+
+    function enemyTurn() {
+      aiTurn("enemy");
+    }
+
+    function aiTurn(side, options = {}) {
+      if (state.gameOver) return false;
+      if (!options.skipGain) gainElixir(side);
+      const choice = chooseAiPlay(side);
+      if (!choice) {
+        log(`${sideName(side)}选择存圣水。`);
+        return false;
+      }
+      state[elixirKey(side)] -= choice.cost;
+      const played = rotateCycle(side, choice.index);
+      const actual = deployCard(side, played, choice.place, choice.actual);
+      if (played.name !== "Mirror" && actual) {
+        if (side === "player") state.playerLast = actual;
+        else state.enemyLast = actual;
+      }
+      recordPlayedCard(side, actual || played);
+      return true;
+    }
+
+    function chooseAiPlay(side = "enemy") {
+      const enemy = side === "player" ? "enemy" : "player";
+      const cards = hand(side);
+      const elixir = state[elixirKey(side)];
+      const affordable = cards.map((card, index) => ({ card, index, cost: currentCost(card, side) })).filter(item => item.cost <= elixir);
+      if (!affordable.length) return null;
+      const difficulty = aiDifficultyFor(side);
+      if (difficulty === "easy") return chooseEasyAiPlay(side, affordable, enemy);
+      if (difficulty === "pharaoh") return choosePharaohAiPlay(side, affordable, enemy);
+
+      const threats = state.units.filter(unit => unit.side === enemy && unit.hp > 0 && (side === "player" ? unit.pos > 7.5 : unit.pos < 12.5));
+      const airThreat = threats.some(unit => unit.isAir);
+      const swarmThreat = threats.some(unit => unit.count >= 3 || unit.isSwarm || unit.name.includes("Skeleton") || unit.name.includes("Goblin"));
+      const tankThreat = threats.some(unit => unit.maxHp >= 1100 || unit.isBuildingTargeter);
+      const threatenedLane = mostThreatenedLane(threats, side) || chooseWeakLane(side);
+      const prediction = difficulty === "hard" ? predictOpponent(side) : null;
+      const ownPush = state.units.filter(unit => unit.side === side && unit.hp > 0 && unit.type !== "Building" && (side === "player" ? unit.pos < 12 : unit.pos > 8));
+
+      let scored = affordable.map(item => {
+        let score = 0;
+        const c = playableCard(item.card, side);
+        if (threats.length) {
+          if (airThreat && c.canHitAir) score += 32;
+          if (!airThreat && c.canHitGround) score += 10;
+          if (swarmThreat && (c.isSplash || c.type === "Spell")) score += 26;
+          if (tankThreat && (highDpsNames.has(c.name) || c.type === "Building" || c.isBuildingTargeter)) score += 22;
+          if (c.type === "Building") score += 11;
+          score -= c.cost * 1.2;
+        } else {
+          if (c.isWinCondition) score += state.enemyElixir >= 6 ? 28 : 12;
+          if (c.type !== "Spell" && !c.isBuildingTargeter) score += 8;
+          if (c.cost <= 3) score += 4;
+          score += Math.random() * 8;
+        }
+        if (difficulty === "hard") {
+          score += hardAiScore(c, { side, enemy, threats, ownPush, prediction, threatenedLane, elixir });
+        }
+        if (c.name === "Rocket" && elixir < 9 && !threats.length) score -= 25;
+        return { ...item, score, actual: c };
+      }).sort((a, b) => b.score - a.score);
+
+      const pick = scored[0];
+      if (!pick || pick.score < 2 && elixir < 9) return null;
+      const place = chooseAiPlacement(side, pick.actual, { enemy, threats, threatenedLane, prediction, ownPush, difficulty });
+      if (!place) place = PLACEMENTS[0];
+      return { ...pick, place };
+    }
+
+    function aiDifficultyFor(side) {
+      if (state.mode !== "ai" || side !== "enemy") return "normal";
+      return state.aiDifficulty || "normal";
+    }
+
+    function chooseEasyAiPlay(side, affordable, enemy) {
+      const elixir = state[elixirKey(side)];
+      if (elixir >= 6 && Math.random() < 0.28) return null;
+      const pick = affordable[Math.floor(Math.random() * affordable.length)];
+      const actual = playableCard(pick.card, side);
+      let place;
+      if (state.mode === "touchdown") {
+        place = touchdownAiPlace(side, Math.random() > 0.5 ? "L" : "R", Math.random() < 0.45);
+      } else {
+        const choices = actual.type === "Spell" ? PLACEMENTS : PLACEMENTS.filter(p => p.kind !== "bridge" || Math.random() > 0.35);
+        place = choices[Math.floor(Math.random() * choices.length)] || PLACEMENTS[0];
+      }
+      return { ...pick, actual, place, score: 0 };
+    }
+
+    function choosePharaohAiPlay(side, affordable, enemy) {
+      const context = pharaohContext(side, enemy);
+      state.pharaohNote = context.stage;
+      const lethal = choosePharaohLethal(side, affordable, context);
+      if (lethal) return lethal;
+      if (context.threats.length) {
+        const defense = choosePharaohDefense(side, affordable, context);
+        if (defense) return defense;
+      }
+      if (shouldPharaohWait(context)) {
+        state.pharaohNote = `${context.stage}：暂不下牌`;
+        return null;
+      }
+      const attack = choosePharaohAttack(side, affordable, context);
+      if (attack) return attack;
+      const cycle = choosePharaohCycle(side, affordable, context);
+      if (cycle) return cycle;
+      state.pharaohNote = `${context.stage}：保留圣水`;
+      return null;
+    }
+
+    function pharaohContext(side, enemy) {
+      const elixir = state[elixirKey(side)];
+      const opponentElixir = state[elixirKey(enemy)];
+      const threats = state.units.filter(unit => unit.side === enemy && unit.hp > 0 && (side === "player" ? unit.pos > 7.2 : unit.pos < 12.8));
+      const ownSurvivors = state.units.filter(unit => unit.side === side && unit.hp > 0 && unit.type !== "Building" && (side === "player" ? unit.pos < 13 : unit.pos > 7));
+      const observed = observedOpponentModel(side);
+      const stage = pharaohStage(side, observed);
+      const towerLead = towerHpSum(side) - towerHpSum(enemy);
+      const threatenedLane = mostThreatenedLane(threats, side) || chooseWeakLane(side);
+      const keyCountersOut = keyCountersRecentlyUsed(side, observed);
+      const recentHeavy = pharaohRecentHeavyPlays(observed);
+      const terminal = state.time >= TRIPLE_ELIXIR_START || Math.min(...princessHps(enemy)) <= 900;
+      return { side, enemy, elixir, opponentElixir, threats, ownSurvivors, observed, stage, towerLead, threatenedLane, keyCountersOut, recentHeavy, terminal };
+    }
+
+    function observedOpponentModel(side) {
+      const opponent = side === "player" ? "enemy" : "player";
+      const history = opponent === "player" ? state.playerPlayedHistory || [] : state.enemyPlayedHistory || [];
+      const names = [...new Set(history.map(item => item.name))];
+      const cards = names.map(name => cardByName.get(name) || virtualCard(name)).filter(Boolean);
+      const inferred = analyzeDeck(names);
+      return {
+        history,
+        names,
+        cards,
+        strategy: names.length >= 3 ? inferred : { name: "识别中", avgCost: 4, wincons: [], spells: [], buildings: [], swarmCount: 0, airCount: 0 },
+        recent: history.slice(-4).map(item => item.name),
+        seenWincons: cards.filter(card => card.isWinCondition).map(card => card.name),
+        seenBuildings: cards.filter(card => card.type === "Building").map(card => card.name),
+        seenSmallSpells: names.filter(name => ["The Log", "Arrows", "Zap", "Giant Snowball", "Barbarian Barrel"].includes(name)),
+        seenBigSpells: names.filter(name => ["Rocket", "Lightning", "Fireball", "Poison", "Earthquake"].includes(name)),
+        seenSplash: cards.filter(card => card.isSplash).map(card => card.name)
+      };
+    }
+
+    function pharaohStage(side, observed) {
+      if (state.time >= TRIPLE_ELIXIR_START || Math.min(...princessHps(side === "player" ? "enemy" : "player")) <= 900) return "终局管理";
+      if (observed.names.length < 3 && state.time < 75) return "识别体系";
+      if (observed.names.length < 6 && state.time < 150) return "建立轮转";
+      const threats = state.units.some(unit => unit.side !== side && unit.hp > 0 && (side === "player" ? unit.pos > 7.2 : unit.pos < 12.8));
+      if (threats) return "最低成本防守";
+      return "确认胜利路径";
+    }
+
+    function towerHpSum(side) {
+      return Object.values(state.towers[side]).reduce((sum, towerObj) => sum + Math.max(0, towerObj.hp), 0);
+    }
+
+    function princessHps(side) {
+      return [state.towers[side].left.hp, state.towers[side].right.hp].map(value => Math.max(0, value));
+    }
+
+    function keyCountersRecentlyUsed(side, observed) {
+      const ownStrategy = state.aiStrategy || { name: "均衡控制" };
+      let counters = [];
+      if (ownStrategy.name.includes("诱饵")) counters = ["The Log", "Arrows", "Zap", "Giant Snowball", "Barbarian Barrel"];
+      else if (ownStrategy.name.includes("墓园")) counters = ["Poison", "Valkyrie", "Baby Dragon", "Bomb Tower", "Dark Prince"];
+      else if (ownStrategy.name.includes("速转") || ownStrategy.name.includes("桥头")) counters = ["Cannon", "Tesla", "Inferno Tower", "Bomb Tower", "Tornado"];
+      else if (ownStrategy.name.includes("攻城")) counters = ["Giant", "Royal Giant", "Earthquake", "Rocket", "Lightning"];
+      else counters = ["Inferno Tower", "Cannon", "Tesla", "The Log", "Fireball"];
+      return observed.recent.filter(name => counters.includes(name));
+    }
+
+    function pharaohRecentHeavyPlays(observed) {
+      const heavyNames = new Set(["Golem", "Lava Hound", "P.E.K.K.A", "Mega Knight", "Three Musketeers", "Royal Giant", "Electro Giant", "Goblin Giant", "Giant", "Rocket", "Lightning"]);
+      return observed.history
+        .slice(-5)
+        .filter(item => (item.cost || 0) >= 5 || heavyNames.has(item.name))
+        .map(item => item.name);
+    }
+
+    function shouldPharaohWait(context) {
+      if (context.elixir >= 9) return false;
+      if (context.threats.length) return false;
+      if (context.recentHeavy.length && context.elixir >= 4) return false;
+      if (context.opponentElixir <= 3 && context.elixir >= 4) return false;
+      if (context.stage === "识别体系" && context.elixir < 7 && context.observed.names.length < 2) return true;
+      if (context.towerLead > 500 && context.terminal && context.elixir < 9) return true;
+      if (!context.keyCountersOut.length && !context.ownSurvivors.length && context.elixir < 7) return true;
+      return false;
+    }
+
+    function choosePharaohLethal(side, affordable, context) {
+      const enemy = context.enemy;
+      const lowTower = Object.values(state.towers[enemy]).filter(t => t.name !== "K" && t.hp > 0).sort((a, b) => a.hp - b.hp)[0];
+      if (!lowTower || lowTower.hp > 950 || context.elixir < 6) return null;
+      const spells = affordable
+        .map(item => ({ ...item, actual: playableCard(item.card, side) }))
+        .filter(item => item.actual.type === "Spell" && spellDamage(item.actual.name, item.actual.cost) * towerSpellRatio(item.actual.name) >= lowTower.hp);
+      const pick = spells.sort((a, b) => a.cost - b.cost)[0];
+      if (!pick || context.threats.length && context.elixir - pick.cost < 3) return null;
+      state.pharaohNote = "终局管理：法术斩杀";
+      return { ...pick, place: spellPlacementForTower(lowTower), score: 999 };
+    }
+
+    function spellPlacementForTower(towerObj) {
+      if (towerObj.lane === "L") return PLACEMENTS.find(p => p.id === "leftBridge") || PLACEMENTS[2];
+      if (towerObj.lane === "R") return PLACEMENTS.find(p => p.id === "rightBridge") || PLACEMENTS[3];
+      return PLACEMENTS.find(p => p.id === "middle") || PLACEMENTS[4];
+    }
+
+    function choosePharaohDefense(side, affordable, context) {
+      const threatValue = context.threats.reduce((sum, unit) => sum + unit.hp + unit.damage * 2 + (unit.isBuildingTargeter ? 550 : 0) + (unit.isAir ? 260 : 0), 0);
+      const airThreat = context.threats.some(unit => unit.isAir);
+      const swarmThreat = context.threats.length >= 3 || context.threats.some(unit => unit.count >= 3 || unit.isSwarm || ["Skeletons", "Goblins", "Bats"].some(name => unit.name.includes(name)));
+      const tankThreat = context.threats.some(unit => unit.maxHp > 1400 || unit.isBuildingTargeter);
+      const buildingTargetThreat = context.threats.some(unit => unit.isBuildingTargeter);
+      const candidates = affordable.map(item => {
+        const card = playableCard(item.card, side);
+        let score = 0;
+        if (card.type === "Building") score += buildingTargetThreat ? 96 : tankThreat ? 44 : 12;
+        if (card.name === "Inferno Tower" && tankThreat) score += 88;
+        if (highDpsNames.has(card.name) && tankThreat) score += 52;
+        if (card.canHitAir && airThreat) score += 58;
+        if (!card.canHitAir && airThreat && card.type !== "Spell" && card.type !== "Building") score -= 38;
+        if (card.isSplash && swarmThreat) score += 58;
+        if (card.type === "Spell" && swarmThreat) score += 46;
+        if (card.cost <= 3 && threatValue < 1700) score += 32;
+        if (card.cost <= 2 && context.threats.length <= 2) score += 18;
+        if (context.elixir - item.cost < 2 && threatValue < 2200) score -= 20;
+        if (card.isWinCondition && threatValue > 1100) score -= 62;
+        score -= card.cost * 5;
+        return { ...item, actual: card, score };
+      }).filter(item => item.score > 5).sort((a, b) => b.score - a.score || a.cost - b.cost);
+      const pick = candidates[0];
+      if (!pick) return null;
+      state.pharaohNote = "最低成本防守";
+      return { ...pick, place: choosePharaohDefensePlacement(side, pick.actual, context), score: pick.score };
+    }
+
+    function choosePharaohDefensePlacement(side, card, context) {
+      if (card.type === "Spell") return spellPlacementForThreat(side, context.threats, context.threatenedLane);
+      if (card.type === "Building") return PLACEMENTS.find(p => p.id === "middle") || PLACEMENTS[4];
+      return PLACEMENTS.find(p => context.threatenedLane === "L" ? p.id === "kingLeft" : p.id === "kingRight") || PLACEMENTS[0];
+    }
+
+    function choosePharaohAttack(side, affordable, context) {
+      const windowOpen = context.keyCountersOut.length > 0 || context.opponentElixir <= 5 || context.ownSurvivors.length > 0 || context.recentHeavy.length > 0 || context.elixir >= 8;
+      if (!windowOpen) return null;
+      const candidates = affordable.map(item => {
+        const card = playableCard(item.card, side);
+        let score = 0;
+        if (card.isWinCondition) score += 58;
+        if (state.aiStrategy?.name.includes("诱饵") && ["Goblin Barrel", "Princess", "Rocket"].includes(card.name)) score += 36;
+        if (state.aiStrategy?.name.includes("攻城") && ["X-Bow", "Mortar"].includes(card.name)) score += 42;
+        if (state.aiStrategy?.name.includes("大型推进") && card.isWinCondition && context.elixir >= 9) score += 45;
+        if (context.ownSurvivors.length && card.type !== "Building" && !card.isBuildingTargeter) score += 24;
+        if (context.recentHeavy.length && card.isWinCondition) score += 34;
+        if (context.recentHeavy.length && card.cost <= 4 && card.type !== "Building") score += 14;
+        if (context.opponentElixir <= 3 && card.isWinCondition) score += 28;
+        if (context.opponentElixir <= 3 && card.cost <= 3 && card.type !== "Building") score += 12;
+        if (context.keyCountersOut.length && card.isWinCondition) score += context.keyCountersOut.length * 16;
+        if (context.observed.seenBuildings.length && ["Earthquake", "Lightning", "Fireball", "Poison"].includes(card.name)) score += 20;
+        if (card.type === "Spell" && !context.terminal && !context.keyCountersOut.length && !context.observed.seenBuildings.length) score -= 18;
+        if (card.type === "Building" && !card.isWinCondition) score -= 20;
+        if (context.elixir - item.cost < 3 && !context.terminal && !context.recentHeavy.length) score -= 18;
+        score += context.keyCountersOut.length * 10;
+        score -= card.cost * 2.2;
+        return { ...item, actual: card, score };
+      }).filter(item => item.score > 14).sort((a, b) => b.score - a.score || a.cost - b.cost);
+      const pick = candidates[0];
+      if (!pick) return null;
+      state.pharaohNote = context.recentHeavy.length ? "惩罚高费沉底" : context.keyCountersOut.length ? "轮转窗口进攻" : "防守反打";
+      return { ...pick, place: choosePharaohAttackPlacement(side, pick.actual, context), score: pick.score };
+    }
+
+    function choosePharaohAttackPlacement(side, card, context) {
+      const lane = context.recentHeavy.length || context.keyCountersOut.length ? chooseProAttackLane(context.enemy, { hasBuilding: true }) : chooseWeakLane(context.enemy);
+      if (card.type === "Spell") return spellPlacementForTower(weakestPrincess(context.enemy));
+      if (card.isWinCondition || card.type === "Building") return PLACEMENTS.find(p => lane === "L" ? p.id === "leftBridge" : p.id === "rightBridge") || PLACEMENTS[2];
+      return PLACEMENTS.find(p => lane === "L" ? p.id === "kingLeft" : p.id === "kingRight") || PLACEMENTS[0];
+    }
+
+    function choosePharaohCycle(side, affordable, context) {
+      const lowRisk = affordable.map(item => ({ ...item, actual: playableCard(item.card, side) }))
+        .filter(item => item.cost <= 3 && !item.actual.isWinCondition && (item.actual.type !== "Spell" || ["The Log", "Zap", "Giant Snowball"].includes(item.actual.name)))
+        .sort((a, b) => a.cost - b.cost)[0];
+      if (!lowRisk || context.elixir < 7 && context.stage !== "识别体系") return null;
+      state.pharaohNote = context.stage === "识别体系" ? "低风险试探" : "低费过牌";
+      return { ...lowRisk, place: PLACEMENTS.find(p => p.id === "kingRight") || PLACEMENTS[1], score: 4 };
+    }
+
+    function predictOpponent(side) {
+      const opponent = side === "player" ? "enemy" : "player";
+      const predictedHand = state.mode === "ai" && side === "enemy" ? hand("player").map(card => playableCard(card, "player")) : [];
+      const strategy = opponent === "player" ? state.playerStrategy : state.aiStrategy;
+      const played = opponent === "player" ? state.playerPlayedCounts : state.enemyPlayedCounts;
+      const handNames = new Set(predictedHand.map(card => card.name));
+      return {
+        strategy,
+        played,
+        hand: predictedHand,
+        hasWinCondition: predictedHand.some(card => card.isWinCondition),
+        hasAir: predictedHand.some(card => card.isAir),
+        hasSwarm: predictedHand.some(card => card.isSwarm || groupDeployProfiles[card.name]),
+        hasBuilding: predictedHand.some(card => card.type === "Building"),
+        hasBigSpell: predictedHand.some(card => ["Rocket", "Lightning", "Fireball", "Poison"].includes(card.name)),
+        hasCheapCycle: predictedHand.some(card => card.cost <= 2),
+        likelyCounterSpell: ["Fireball", "Rocket", "Lightning", "Poison", "The Log", "Arrows"].find(name => handNames.has(name))
+      };
+    }
+
+    function hardAiScore(card, context) {
+      const { threats, ownPush, prediction, elixir } = context;
+      let score = 0;
+      const ownStrategy = state.aiStrategy || { name: "均衡控制", avgCost: 4 };
+      if (threats.length) {
+        const threatValue = threats.reduce((sum, unit) => sum + unit.hp + unit.damage * 1.5 + (unit.isBuildingTargeter ? 500 : 0), 0);
+        if (card.type === "Building" && threats.some(unit => unit.isBuildingTargeter)) score += 42;
+        if (card.name === "Inferno Tower" && threats.some(unit => unit.maxHp > 1400)) score += 38;
+        if (card.isSplash && threats.length >= 3) score += 30;
+        if (card.cost <= 3 && threatValue < 1500) score += 12;
+        if (card.isWinCondition && threatValue > 1700) score -= 26;
+      } else {
+        if (ownStrategy.name.includes("速转") && card.isWinCondition && elixir >= 4) score += 26;
+        if (ownStrategy.name.includes("诱饵") && ["Goblin Barrel", "Princess", "Rocket"].includes(card.name)) score += 24;
+        if (ownStrategy.name.includes("大型推进") && card.isWinCondition && elixir >= 8) score += 34;
+        if (ownStrategy.name.includes("攻城") && ["X-Bow", "Mortar"].includes(card.name) && elixir >= 6) score += 32;
+        if (ownPush.length && card.type !== "Building" && !card.isBuildingTargeter) score += 16;
+        if (prediction?.hasBuilding && card.type === "Spell" && ["Fireball", "Lightning", "Poison", "Earthquake"].includes(card.name)) score += 20;
+        if (prediction?.hasWinCondition && card.type === "Building" && elixir < 7) score += 10;
+        if (prediction?.hasSwarm && (card.isSplash || ["The Log", "Arrows", "Zap"].includes(card.name))) score += 12;
+      }
+      if (prediction?.hasAir && card.canHitAir && card.type !== "Spell") score += 10;
+      if (prediction?.likelyCounterSpell && card.cost <= 2) score += 4;
+      score -= card.cost * 0.35;
+      return score;
+    }
+
+    function chooseAiPlacement(side, card, context) {
+      const { enemy, threats, threatenedLane, prediction, ownPush, difficulty } = context;
+      if (state.mode === "touchdown") {
+        const lane = threats.length ? threatenedLane : chooseWeakLane(enemy);
+        return touchdownAiPlace(side, lane, threats.length || (card.type === "Building" && !card.isWinCondition));
+      }
+      if (difficulty === "hard") return chooseHardPlacement(side, card, context);
+      if (threats.length || (card.type === "Building" && !card.isWinCondition)) {
+        return PLACEMENTS.find(p => (threatenedLane === "L" ? p.id === "kingLeft" : p.id === "kingRight")) || PLACEMENTS[0];
+      }
+      const lane = chooseWeakLane(enemy);
+      return PLACEMENTS.find(p => lane === "L" ? p.id === "leftBridge" : p.id === "rightBridge");
+    }
+
+    function chooseHardPlacement(side, card, context) {
+      const { enemy, threats, threatenedLane, prediction, ownPush } = context;
+      if (threats.length) {
+        if (card.type === "Spell") return spellPlacementForThreat(side, threats, threatenedLane);
+        if (card.type === "Building") return PLACEMENTS.find(p => p.id === "middle") || PLACEMENTS[0];
+        return PLACEMENTS.find(p => (threatenedLane === "L" ? p.id === "kingLeft" : p.id === "kingRight")) || PLACEMENTS[0];
+      }
+      const pushLane = ownPush.length ? laneToSide(mostThreatenedLane(ownPush, enemy)) : null;
+      const lane = pushLane || chooseProAttackLane(enemy, prediction);
+      if (card.type === "Spell") {
+        return prediction?.hasBuilding ? (PLACEMENTS.find(p => lane === "L" ? p.id === "leftBridge" : p.id === "rightBridge") || PLACEMENTS[2]) : PLACEMENTS.find(p => p.id === "middle");
+      }
+      if (card.type === "Building" && !card.isWinCondition) return PLACEMENTS.find(p => p.id === "middle") || PLACEMENTS[0];
+      if (card.isWinCondition || card.type === "Building") return PLACEMENTS.find(p => lane === "L" ? p.id === "leftBridge" : p.id === "rightBridge") || PLACEMENTS[2];
+      return PLACEMENTS.find(p => lane === "L" ? p.id === "kingLeft" : p.id === "kingRight") || PLACEMENTS[0];
+    }
+
+    function spellPlacementForThreat(side, threats, fallbackLane) {
+      const center = threats
+        .slice()
+        .sort((a, b) => (b.hp + b.damage * 2) - (a.hp + a.damage * 2))[0];
+      const lane = center ? laneToSide(center.lane) || fallbackLane : fallbackLane;
+      return PLACEMENTS.find(p => lane === "L" ? p.id === "kingLeft" : p.id === "kingRight") || PLACEMENTS[0];
+    }
+
+    function chooseProAttackLane(defenderSide, prediction) {
+      let lane = chooseWeakLane(defenderSide);
+      if (prediction?.hasBuilding && Math.random() < 0.35) lane = lane === "L" ? "R" : "L";
+      return lane;
+    }
+
+    function touchdownAiPlace(side, lane, defensive = false) {
+      const pos = side === "player"
+        ? (defensive ? 16.2 : 13.2)
+        : (defensive ? 3.8 : 6.8);
+      return {
+        id: `touchdown-${side}-${lane}-${defensive ? "defense" : "push"}`,
+        label: `达阵${defensive ? "防守" : "推进"}：${laneLabel(lane)}`,
+        lane,
+        playerPos: pos,
+        enemyPos: pos,
+        kind: "touchdown",
+        custom: true
+      };
+    }
+
+    function mostThreatenedLane(units, defenderSide = "enemy") {
+      const scores = { L: 0, R: 0 };
+      units.forEach(u => {
+        const lane = laneToSide(u.lane) || chooseWeakLane(defenderSide);
+        scores[lane] += u.hp + u.damage * 2;
+      });
+      if (scores.L === 0 && scores.R === 0) return null;
+      return scores.L >= scores.R ? "L" : "R";
+    }
+
+    function laneToSide(lane) {
+      if (lane === "L" || lane === "ML") return "L";
+      if (lane === "R" || lane === "MR") return "R";
+      return null;
+    }
+
+    function chooseWeakLane(side) {
+      if (state.mode === "touchdown") return Math.random() > 0.5 ? "L" : "R";
+      const towers = state.towers[side];
+      if (towers.left.hp <= 0 && towers.right.hp <= 0) return "M";
+      if (towers.left.hp <= 0) return "R";
+      if (towers.right.hp <= 0) return "L";
+      return towers.left.hp <= towers.right.hp ? "L" : "R";
+    }
+
+    function weakestPrincess(side) {
+      if (state.mode === "touchdown") return null;
+      const towers = state.towers[side];
+      if (towers.left.hp <= 0) return towers.right;
+      if (towers.right.hp <= 0) return towers.left;
+      return towers.left.hp <= towers.right.hp ? towers.left : towers.right;
+    }
+
+    function gainElixir(side) {
+      const key = side === "player" ? "playerElixir" : "enemyElixir";
+      state[key] = Math.min(10, state[key] + 1);
+      state.units.forEach(unit => {
+        if (unit.side === side && unit.name === "Elixir Collector" && unit.collectorTicks > 0) {
+          state[key] = Math.min(10, state[key] + 1);
+          unit.collectorTicks--;
+        }
+      });
+    }
+
+    function resolveTurn(options = {}) {
+      if (options.gainBoth) {
+        gainElixir("player");
+        gainElixir("enemy");
+      } else if (!options.noGain) {
+        gainElixir("player");
+      }
+      state.effects = [];
+      tickUnitsStart();
+      towerFire("player");
+      towerFire("enemy");
+      unitActions();
+      moveUnits();
+      if (checkTouchdowns()) return;
+      spawnFromBuildings();
+      cleanupUnits();
+      checkAllTowers();
+    }
+
+    function tickUnitsStart() {
+      state.units.forEach(unit => {
+        if (unit.frozen > 0) unit.frozen--;
+        if (unit.rage > 0) unit.rage--;
+        if (unit.rooted > 0) unit.rooted--;
+        if (unit.jumping > 0) unit.jumping--;
+        if (unit.slowed > 0) unit.slowed--;
+        if (unit.poisoned > 0) {
+          unit.poisoned--;
+          damageUnit(unit, unit.poisonDamage || 45);
+        }
+        if (unit.cursed > 0) {
+          unit.cursed--;
+          if (unit.cursed <= 0 && unit.hp > 0) unit.cursedBy = null;
+        }
+        if (unit.cursedHogTicks > 0) {
+          unit.cursedHogTicks--;
+          if (unit.cursedHogTicks <= 0 && unit.hp > 0) unit.cursedHogBy = null;
+        }
+        if (unit.type === "Building") unit.life--;
+      });
+    }
+
+    function towerFire(side) {
+      if (state.mode === "touchdown") return;
+      const enemy = side === "player" ? "enemy" : "player";
+      Object.values(state.towers[side]).forEach(t => {
+        if (t.hp <= 0) return;
+        if (t.name === "K" && !kingTowerCanFire(t)) return;
+        const target = state.units
+          .filter(u => u.side === enemy && u.hp > 0 && targetable(t, u) && canTowerReach(t, u))
+          .sort((a, b) => Math.abs(a.pos - t.pos) - Math.abs(b.pos - t.pos))[0];
+        if (target) {
+          damageUnit(target, towerTurnDamage(t));
+        }
+      });
+    }
+
+    function kingTowerCanFire(towerObj) {
+      return towerObj.active && state.turn >= towerObj.activeTurn;
+    }
+
+    function towerTurnDamage(towerObj) {
+      const seconds = phaseInfo(state.time).seconds;
+      return Math.max(towerObj.damage, Math.round(towerObj.dps * seconds));
+    }
+
+    function canTowerReach(tower, unit) {
+      if (!laneCompatible(tower.lane, unit.lane)) return false;
+      return Math.abs(tower.pos - unit.pos) <= tower.range;
+    }
+
+    function unitActions() {
+      const acting = shuffle(state.units.filter(unit => unit.hp > 0));
+      acting.forEach(unit => {
+        if (unit.hp <= 0 || unit.frozen > 0 || !unit.attacks) return;
+        const target = findTarget(unit);
+        if (!target) return;
+        if (unit.diesOnAttack) {
+          resolveImpactAttack(unit, target);
+          return;
+        }
+        const damage = attackDamage(unit, target);
+        dealDamage(unit, target, damage);
+      });
+    }
+
+    function attackDamage(unit, target) {
+      let damage = Math.round(unit.damage * (unit.rage > 0 ? 1.35 : 1));
+      if (infernoBeamNames.has(unit.name)) {
+        if (unit.infernoTargetId === target.id) unit.infernoCharge = Math.min(3, (unit.infernoCharge || 0) + 1);
+        else {
+          unit.infernoTargetId = target.id;
+          unit.infernoCharge = 1;
+        }
+        damage = Math.round(damage * (0.75 + unit.infernoCharge * 0.55));
+        state.effects.push({ kind: "beam", fromLane: unit.lane, fromPos: unit.pos, toLane: target.lane, toPos: target.pos });
+      } else {
+        unit.infernoTargetId = null;
+        unit.infernoCharge = 0;
+      }
+      return damage;
+    }
+
+    function findTarget(unit) {
+      const enemy = unit.side === "player" ? "enemy" : "player";
+      const locked = lockedTarget(unit);
+      if (locked) return inRange(unit, locked) ? locked : null;
+      const candidates = state.units.filter(other => {
+        return other.side === enemy && other.hp > 0 && canUnitTarget(unit, other) && inRange(unit, other);
+      });
+      if (candidates.length) {
+        const target = chooseTarget(unit, candidates);
+        unit.targetId = target.id;
+        return target;
+      }
+      const t = towerTargetFor(unit, enemy);
+      if (t && t.hp > 0 && inRange(unit, t)) return t;
+      return null;
+    }
+
+    function towerTargetFor(unit, side) {
+      if (state.mode === "touchdown") return null;
+      const towers = state.towers[side];
+      if (unit.lane === "L" || unit.lane === "ML") return towers.left.hp > 0 ? towers.left : towers.king;
+      if (unit.lane === "R" || unit.lane === "MR") return towers.right.hp > 0 ? towers.right : towers.king;
+      const weak = weakestPrincess(side);
+      return weak.hp > 0 ? weak : towers.king;
+    }
+
+    function targetable(attacker, target) {
+      if (target.jumping > 0 && !attacker.canHitAir) return false;
+      if (target.isAir && !attacker.canHitAir) return false;
+      if (!target.isAir && !attacker.canHitGround) return false;
+      return true;
+    }
+
+    function canUnitTarget(attacker, target) {
+      if (!attacker.attacks || attacker.side === target.side) return false;
+      if (attacker.isBuildingTargeter && target.type !== "Building") return false;
+      return targetable(attacker, target);
+    }
+
+    function lockedTarget(unit) {
+      if (!unit.targetId) return null;
+      const target = state.units.find(other => other.id === unit.targetId && other.hp > 0);
+      if (!target || !canUnitTarget(unit, target) || areaDistance(unit.lane, unit.pos, target.lane, target.pos) > aggroDropRange(unit)) {
+        unit.targetId = null;
+        return null;
+      }
+      return target;
+    }
+
+    function findChaseTarget(unit) {
+      if (!unit.attacks || unit.type === "Building") return null;
+      const locked = lockedTarget(unit);
+      if (locked) return locked;
+      const enemy = unit.side === "player" ? "enemy" : "player";
+      const candidates = state.units.filter(other => {
+        return other.side === enemy &&
+          other.hp > 0 &&
+          canUnitTarget(unit, other) &&
+          areaDistance(unit.lane, unit.pos, other.lane, other.pos) <= aggroRange(unit);
+      });
+      if (!candidates.length) return null;
+      const target = chooseTarget(unit, candidates);
+      unit.targetId = target.id;
+      return target;
+    }
+
+    function chooseTarget(unit, candidates) {
+      return candidates.sort((a, b) => targetScore(unit, a) - targetScore(unit, b))[0];
+    }
+
+    function targetScore(unit, target) {
+      let score = areaDistance(unit.lane, unit.pos, target.lane, target.pos);
+      if (target.isBuildingTargeter) score -= 0.45;
+      if (unit.isBuildingTargeter && target.type === "Building") score -= 0.75;
+      if (inRange(unit, target)) score -= 1.2;
+      return score;
+    }
+
+    function aggroRange(unit) {
+      if (unit.isBuildingTargeter) return Math.max(5.6, unit.range + 2.4);
+      if (unit.isRanged || unit.isAir) return Math.max(5.2, unit.range + 2.0);
+      return Math.max(4.6, unit.range + 3.1);
+    }
+
+    function aggroDropRange(unit) {
+      return aggroRange(unit) + 2.3;
+    }
+
+    function inRange(a, b) {
+      return laneCompatible(a.lane, b.lane) && distance(a, b) <= a.range;
+    }
+
+    function laneCompatible(a, b) {
+      return a === b || a === "M" || b === "M" || Math.abs(laneIndex(a) - laneIndex(b)) <= 1;
+    }
+
+    function distance(a, b) {
+      const lanePenalty = Math.abs(laneIndex(a.lane) - laneIndex(b.lane)) * 0.75;
+      return Math.abs(a.pos - b.pos) + lanePenalty;
+    }
+
+    function damageTower(towerObj, side, amount, cause) {
+      if (!towerObj || towerObj.hp <= 0 || amount <= 0) return 0;
+      const dealt = Math.max(1, Math.round(amount));
+      towerObj.hp -= dealt;
+      if (towerObj.name === "K" && towerObj.hp > 0) {
+        activateKingTower(side, "国王塔受到伤害");
+      }
+      checkTowerDeath(towerObj, side, cause);
+      return dealt;
+    }
+
+    function damageUnit(unit, amount, options = {}) {
+      if (!unit || unit.hp <= 0 || amount <= 0) return { hpDamage: 0, shieldDamage: 0 };
+      const dealt = Math.max(1, Math.round(amount));
+      if (unit.shield > 0) {
+        const shieldDamage = Math.min(unit.shield, dealt);
+        unit.shield = Math.max(0, unit.shield - dealt);
+        if (unit.shield === 0) log(`${sideName(unit.side)}的 ${cardName(unit.name)} 盾牌破碎。`);
+        return { hpDamage: 0, shieldDamage };
+      }
+      unit.hp -= dealt;
+      if (options.attacker?.name === "Mother Witch" && unit.type !== "Building" && unit.name !== "Cursed Hog") {
+        unit.cursedHogBy = options.attacker.side;
+        unit.cursedHogTicks = Math.max(unit.cursedHogTicks || 0, 5);
+      }
+      return { hpDamage: dealt, shieldDamage: 0 };
+    }
+
+    function activateKingTower(side, reason) {
+      if (state.mode === "touchdown") return;
+      const king = state.towers[side]?.king;
+      if (!king || king.hp <= 0 || king.active) return;
+      const delayTurns = Math.max(1, Math.round(TOWER_BALANCE.king.activationSeconds / phaseInfo(state.time).seconds));
+      king.active = true;
+      king.activeTurn = state.turn + delayTurns;
+      log(`${sideName(side)}的 国王塔已激活（${reason}），约 ${TOWER_BALANCE.king.activationSeconds} 秒后开始远程攻击。`);
+    }
+
+    function dealDamage(attacker, target, damage) {
+      if (target.kind === "tower") {
+        damageTower(target, target.side, damage, `${cardName(attacker.name)} 攻击`);
+        return;
+      }
+      damageUnit(target, damage, { attacker });
+      if (attacker.isSplash) {
+        const enemy = attacker.side === "player" ? "enemy" : "player";
+        state.units.forEach(unit => {
+          if (unit === target || unit.side !== enemy || unit.hp <= 0) return;
+          if (laneCompatible(unit.lane, target.lane) && Math.abs(unit.pos - target.pos) <= 1.6 && targetable(attacker, unit)) {
+            damageUnit(unit, Math.round(damage * 0.45), { attacker });
+          }
+        });
+      }
+    }
+
+    function resolveImpactAttack(unit, target) {
+      const enemy = unit.side === "player" ? "enemy" : "player";
+      const lane = target.lane || unit.lane;
+      const pos = target.pos || unit.pos;
+      const baseDamage = Math.round(unit.damage * (unit.rage > 0 ? 1.35 : 1));
+      const name = unit.name;
+      let message = "";
+
+      if (name === "Ice Spirit") {
+        const damage = Math.max(65, Math.round(baseDamage * 0.75));
+        areaDamage(unit.side, lane, pos, damage, { radius: 1.8, freeze: 2 });
+        damageTowersInArea(enemy, lane, pos, damage, 1.8, cardName(name));
+        message = `${sideName(unit.side)}的 ${cardName(name)} 扑向目标，造成范围冰冻。`;
+      } else if (name === "Fire Spirit") {
+        const damage = Math.max(150, Math.round(baseDamage * 1.95));
+        areaDamage(unit.side, lane, pos, damage, { radius: 2.2 });
+        damageTowersInArea(enemy, lane, pos, damage, 2.2, cardName(name));
+        message = `${sideName(unit.side)}的 ${cardName(name)} 撞击爆开，造成范围伤害。`;
+      } else if (name === "Electro Spirit") {
+        const damage = Math.max(75, Math.round(baseDamage * 0.9));
+        chainSpirit(unit, lane, pos, damage);
+        damageTowersInArea(enemy, lane, pos, damage, 3.6, cardName(name));
+        message = `${sideName(unit.side)}的 ${cardName(name)} 跳出电链并眩晕敌人。`;
+      } else if (name === "Heal Spirit") {
+        const damage = Math.max(70, Math.round(baseDamage * 0.75));
+        areaDamage(unit.side, lane, pos, damage, { radius: 1.3 });
+        damageTowersInArea(enemy, lane, pos, damage, 1.3, cardName(name));
+        const healed = healFriendlyArea(unit.side, lane, pos, 3.2, 230);
+        message = `${sideName(unit.side)}的 ${cardName(name)} 撞击后治疗了 ${healed} 个友方单位。`;
+      } else if (name === "Wall Breakers") {
+        const damage = Math.max(360, Math.round(baseDamage * 2.25));
+        areaDamage(unit.side, lane, pos, damage, { radius: 1.8, buildingBonus: 1.8 });
+        damageTowersInArea(enemy, lane, pos, damage, 1.8, cardName(name));
+        message = `${sideName(unit.side)}的 ${cardName(name)} 撞上目标并爆炸。`;
+      } else if (name === "Battle Ram") {
+        const damage = Math.max(310, Math.round(baseDamage * 1.75));
+        areaDamage(unit.side, lane, pos, damage, { radius: 1.3, knock: 0.35 });
+        damageTowersInArea(enemy, lane, pos, damage, 1.3, cardName(name));
+        message = `${sideName(unit.side)}的 ${cardName(name)} 完成冲撞。`;
+      } else if (name === "Skeleton Barrel") {
+        const damage = Math.max(120, Math.round(baseDamage * 0.65));
+        areaDamage(unit.side, lane, pos, damage, { radius: 1.6 });
+        damageTowersInArea(enemy, lane, pos, damage, 1.6, cardName(name));
+        message = `${sideName(unit.side)}的 ${cardName(name)} 破裂落地。`;
+      } else if (name === "Suspicious Bush") {
+        const damage = Math.max(95, Math.round(baseDamage * 0.8));
+        areaDamage(unit.side, lane, pos, damage, { radius: 1.2 });
+        damageTowersInArea(enemy, lane, pos, damage, 1.2, cardName(name));
+        message = `${sideName(unit.side)}的 ${cardName(name)} 暴露后散开。`;
+      } else {
+        dealDamage(unit, target, baseDamage);
+        message = `${sideName(unit.side)}的 ${cardName(name)} 完成一次性攻击。`;
+      }
+
+      const payload = releaseDeathPayload(unit, lane, pos);
+      if (message) log(message);
+      if (payload) log(payload);
+      unit.impactSpent = true;
+      unit.hp = 0;
+    }
+
+    function chainSpirit(unit, lane, pos, damage) {
+      const enemy = unit.side === "player" ? "enemy" : "player";
+      const targets = state.units
+        .filter(other => other.side === enemy && other.hp > 0 && areaDistance(lane, pos, other.lane, other.pos) <= 3.8)
+        .sort((a, b) => areaDistance(lane, pos, a.lane, a.pos) - areaDistance(lane, pos, b.lane, b.pos))
+        .slice(0, 8);
+      targets.forEach(target => {
+        damageUnit(target, damage, { attacker: unit });
+        target.frozen = Math.max(target.frozen, 1);
+      });
+    }
+
+    function healFriendlyArea(side, lane, pos, radius, amount) {
+      let healed = 0;
+      state.units.forEach(unit => {
+        if (unit.side !== side || unit.hp <= 0 || unit.type === "Building") return;
+        if (areaDistance(lane, pos, unit.lane, unit.pos) > radius) return;
+        const nextHp = Math.min(unit.maxHp, unit.hp + amount);
+        if (nextHp > unit.hp) healed++;
+        unit.hp = nextHp;
+      });
+      return healed;
+    }
+
+    function releaseDeathPayload(unit, lane = unit.lane, pos = unit.pos) {
+      if (unit.payloadReleased) return "";
+      unit.payloadReleased = true;
+      if (unit.name === "Battle Ram") {
+        spawnMany(unit.side, "Barbarians", lane, clampPos(pos), 2, 0.62);
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 解体，两个野蛮人继续作战。`;
+      }
+      if (unit.name === "Skeleton Barrel") {
+        spawnMany(unit.side, "Skeletons", lane, clampPos(pos), 6, 0.55);
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 掉出一群骷髅兵。`;
+      }
+      if (unit.name === "Suspicious Bush") {
+        spawnMany(unit.side, "Goblins", lane, clampPos(pos), 2, 0.75);
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 露出两个哥布林。`;
+      }
+      return "";
+    }
+
+    function releaseBuildingPayload(unit) {
+      if (unit.buildingPayloadReleased || !unit.deathSpawnName || unit.deathSpawnCount <= 0) return "";
+      unit.buildingPayloadReleased = true;
+      for (let i = 0; i < unit.deathSpawnCount; i++) {
+        spawnUnit(unit.side, unit.deathSpawnName, unit.lane, clampPos(unit.pos), unit.deathSpawnName === "Goblin Brawler" ? 1 : 0.65);
+      }
+      return `${sideName(unit.side)}的 ${cardName(unit.name)} 破裂，放出了 ${unit.deathSpawnCount} 个${cardName(unit.deathSpawnName)}。`;
+    }
+
+    function moveUnits() {
+      state.units.forEach(unit => {
+        if (unit.hp <= 0 || unit.type === "Building" || unit.frozen > 0 || unit.rooted > 0) return;
+        if (findTarget(unit)) return;
+        const chase = findChaseTarget(unit);
+        if (chase) {
+          moveTowardTarget(unit, chase);
+          return;
+        }
+        moveForward(unit);
+      });
+    }
+
+    function unitStepSpeed(unit) {
+      return unit.speed * (unit.rage > 0 ? 1.35 : 1) * (unit.slowed > 0 ? 0.55 : 1);
+    }
+
+    function moveForward(unit) {
+      const dir = unit.side === "player" ? -1 : 1;
+      moveUnitTo(unit, unit.pos + dir * unitStepSpeed(unit));
+    }
+
+    function moveTowardTarget(unit, target) {
+      const laneGap = laneIndex(target.lane) - laneIndex(unit.lane);
+      if (Math.abs(laneGap) > 0.2) {
+        unit.lane = laneStepToward(unit.lane, target.lane);
+      }
+      const gap = target.pos - unit.pos;
+      const minGap = Math.max(0.35, unit.range * 0.45);
+      if (Math.abs(gap) > minGap) {
+        const step = Math.sign(gap) * Math.min(Math.abs(gap), unitStepSpeed(unit));
+        moveUnitTo(unit, unit.pos + step);
+      }
+    }
+
+    function laneStepToward(fromLane, toLane) {
+      const from = laneIndex(fromLane);
+      const to = laneIndex(toLane);
+      const next = from + Math.sign(to - from);
+      return laneFromIndex(next);
+    }
+
+    function laneFromIndex(index) {
+      const rounded = Math.max(0, Math.min(3, Math.round(index)));
+      return LANES[rounded].id;
+    }
+
+    function moveUnitTo(unit, nextPos) {
+      const crossingRiver = state.mode !== "touchdown" && crossesRiver(unit.pos, nextPos);
+      if (crossingRiver && !canUseRiverPath(unit) && !isBridgeLane(unit.lane)) {
+        unit.lane = riverExitLane(unit);
+      }
+      unit.pos = clampPos(nextPos);
+      if (crossingRiver && (unit.isAir || unit.canJumpRiver)) unit.jumping = unit.isAir ? 0 : 2;
+      if (unit.lane === "M" && (unit.pos < 10 || unit.pos > 10)) {
+        unit.lane = chooseWeakLane(unit.side === "player" ? "enemy" : "player");
+      }
+    }
+
+    function checkTouchdowns() {
+      if (state.mode !== "touchdown" || state.gameOver) return false;
+      const scorer = state.units.find(unit =>
+        unit.hp > 0 &&
+        ((unit.side === "player" && unit.pos <= 0.75) || (unit.side === "enemy" && unit.pos >= 19.25))
+      );
+      if (!scorer) return false;
+      scoreTouchdown(scorer.side, scorer);
+      return true;
+    }
+
+    function scoreTouchdown(side, unit) {
+      const td = state.touchdown;
+      if (side === "player") td.playerScore++;
+      else td.enemyScore++;
+      const scoreText = `${sideName("player")} ${td.playerScore} : ${td.enemyScore} ${sideName("enemy")}`;
+      log(`${sideName(side)}的 ${cardName(unit.name)} 越过对方底线，拿下一局。当前比分：${scoreText}。`);
+      if ((side === "player" ? td.playerScore : td.enemyScore) >= td.targetScore) {
+        endGame(side, `达阵模式先拿到 ${td.targetScore} 局。最终比分：${scoreText}`);
+        return;
+      }
+      td.round++;
+      state.units = [];
+      state.effects = [];
+      state.playerElixir = 5;
+      state.enemyElixir = 5;
+      state.pendingActions = { player: false, enemy: true };
+      selectedHandIndex = { player: null, enemy: null };
+      boardActiveSide = "player";
+      state.mapMessage = `第 ${td.round} 局开始：中央禁区不能下牌，越过对方底线得分。`;
+    }
+
+    function crossesRiver(fromPos, toPos) {
+      return (fromPos > 10 && toPos <= 10) || (fromPos < 10 && toPos >= 10);
+    }
+
+    function canUseRiverPath(unit) {
+      return unit.isAir || unit.canJumpRiver || isBridgeLane(unit.lane);
+    }
+
+    function riverExitLane(unit) {
+      if (unit.lane === "ML") return "L";
+      if (unit.lane === "MR") return "R";
+      const enemy = unit.side === "player" ? "enemy" : "player";
+      return chooseWeakLane(enemy);
+    }
+
+    function spawnFromBuildings() {
+      state.units.forEach(unit => {
+        if (unit.hp <= 0 || unit.spawnEvery <= 0 || state.turn % unit.spawnEvery !== 0) return;
+        const spawnName = unit.spawnName;
+        const count = Math.max(1, unit.spawnCount || 1);
+        for (let i = 0; i < count; i++) {
+          spawnUnit(unit.side, spawnName, unit.lane, unit.pos + (unit.side === "player" ? -0.6 : 0.6), 0.62);
+        }
+        log(`${sideName(unit.side)}的 ${cardName(unit.name)} 产出了 ${count} 个${cardName(spawnName)}。`);
+      });
+    }
+
+    function cleanupUnits() {
+      const removed = state.units.filter(unit => unit.hp <= 0 || (unit.type === "Building" && unit.life <= 0));
+      state.units = state.units.filter(unit => unit.hp > 0 && (unit.type !== "Building" || unit.life > 0));
+      removed.forEach(unit => {
+        if (unit.hp <= 0 && !unit.impactSpent) {
+          const payload = releaseDeathPayload(unit);
+          if (payload) log(payload);
+        }
+        if (unit.type === "Building") {
+          const payload = releaseBuildingPayload(unit);
+          if (payload) log(payload);
+        }
+        const reason = unit.impactSpent ? "完成一次性攻击后消失" : unit.hp <= 0 ? "被击倒" : "到期消失";
+        if (unit.hp <= 0 && unit.cursedHogBy && unit.type !== "Building") {
+          spawnUnit(unit.cursedHogBy, "Cursed Hog", unit.lane, clampPos(unit.pos), 1);
+          log(`${sideName(unit.side)}的 ${cardName(unit.name)} 被击倒，并在${cardName("Mother Witch")}的诅咒下变成了${sideName(unit.cursedHogBy)}的${cardName("Cursed Hog")}。`);
+        } else if (unit.hp <= 0 && unit.cursedBy && unit.type !== "Building") {
+          const amount = Math.min(3, Math.max(1, Math.ceil((unit.count || 1) / 4)));
+          spawnMany(unit.cursedBy, "Goblins", unit.lane, clampPos(unit.pos), amount, 0.7);
+          log(`${sideName(unit.side)}的 ${cardName(unit.name)} 被击倒，并在${cardName("Goblin Curse")}下变成了${sideName(unit.cursedBy)}的哥布林。`);
+        } else {
+          log(`${sideName(unit.side)}的 ${cardName(unit.name)} ${reason}。`);
+        }
+      });
+    }
+
+    function checkAllTowers() {
+      if (state.mode === "touchdown") return;
+      ["player", "enemy"].forEach(side => {
+        Object.values(state.towers[side]).forEach(t => checkTowerDeath(t, side, "持续战斗"));
+      });
+    }
+
+    function checkTowerDeath(towerObj, side, cause) {
+      if (state.mode === "touchdown") return;
+      if (state.gameOver || towerObj.hp > 0) return;
+      towerObj.hp = 0;
+      const attacker = towerObj.destroyedBy || (side === "player" ? "enemy" : "player");
+      towerObj.destroyedBy = attacker;
+      if (towerObj.destroyedAt === undefined) towerObj.destroyedAt = state.time;
+      if (!towerObj._deadLogged) {
+        towerObj._deadLogged = true;
+        log(`${sideName(attacker)}摧毁了${sideName(side)}的 ${towerDisplayName(towerObj)}（${cause}）。`);
+      }
+      if (towerObj.name === "K") {
+        endGame(attacker, "国王塔被攻破。");
+      } else {
+        activateKingTower(side, `${towerDisplayName(towerObj)}被摧毁`);
+        if (state.time >= SUDDEN_DEATH_START) {
+          endGame(attacker, "一塔决胜阶段攻下一座公主塔。");
+        }
+      }
+    }
+
+    function checkSuddenDeathTowerVictory() {
+      if (state.mode === "touchdown" || state.gameOver || state.time < SUDDEN_DEATH_START) return false;
+      for (const side of ["player", "enemy"]) {
+        for (const towerObj of [state.towers[side].left, state.towers[side].right]) {
+          if (towerObj.hp <= 0) {
+            checkTowerDeath(towerObj, side, "一塔决胜复查");
+            return state.gameOver;
+          }
+        }
+      }
+      return false;
+    }
+
+    function advanceClock() {
+      if (state.gameOver) return;
+      const oldTime = state.time;
+      const oldPhase = phaseInfo(oldTime);
+      state.time = Math.min(MATCH_END, state.time + oldPhase.seconds);
+      state.turn++;
+      const newPhase = phaseInfo(state.time);
+      if (oldPhase.name !== newPhase.name) {
+        log(`进入${newPhase.name}圣水节奏：每回合 ${newPhase.seconds} 秒。`);
+        showDanmaku(`${newPhase.name}圣水！`);
+      }
+      triggerTimeDanmaku(oldTime, state.time);
+      if (checkSuddenDeathTowerVictory()) return;
+      if (state.mode !== "touchdown" && state.time >= MATCH_END) {
+        const result = compareTowerHp();
+        endGame(result.winner, `300 秒结束，按剩余塔血判定：${result.reason}`);
+      }
+    }
+
+    function triggerTimeDanmaku(oldTime, newTime) {
+      if (!state.countdownFlags) state.countdownFlags = { before180: false, suddenDeath: false, final10: false };
+      if (!state.countdownFlags.before180 && oldTime < COUNTDOWN_180_START && newTime >= COUNTDOWN_180_START) {
+        state.countdownFlags.before180 = true;
+        showDanmaku("一塔决胜前 10 秒");
+      }
+      if (!state.countdownFlags.suddenDeath && oldTime < SUDDEN_DEATH_START && newTime >= SUDDEN_DEATH_START) {
+        state.countdownFlags.suddenDeath = true;
+        showDanmaku("一塔决胜！");
+      }
+      if (!state.countdownFlags.final10 && oldTime < FINAL_COUNTDOWN_START && newTime >= FINAL_COUNTDOWN_START) {
+        state.countdownFlags.final10 = true;
+        showDanmaku("终局最后 10 秒");
+      }
+    }
+
+    function compareTowerHp() {
+      if (state.mode === "touchdown") {
+        const td = state.touchdown;
+        if (td.playerScore === td.enemyScore) return { winner: Math.random() > 0.5 ? "player" : "enemy", reason: "达阵比分相同，抛硬币" };
+        return td.playerScore > td.enemyScore ? { winner: "player", reason: `${sideName("player")}达阵局数更多` } : { winner: "enemy", reason: `${sideName("enemy")}达阵局数更多` };
+      }
+      const sum = side => Object.values(state.towers[side]).reduce((n, t) => n + Math.max(0, t.hp), 0);
+      const p = sum("player");
+      const e = sum("enemy");
+      if (p === e) return { winner: Math.random() > 0.5 ? "player" : "enemy", reason: "双方塔血相同，抛硬币" };
+      return p > e ? { winner: "player", reason: `${sideName("player")}塔血更多` } : { winner: "enemy", reason: `${sideName("enemy")}塔血更多` };
+    }
+
+    function endGame(winner, reason) {
+      state.gameOver = true;
+      stopAuto();
+      const playerWon = winner === "player";
+      const namedMode = state.mode === "duel" || state.mode === "demo";
+      el("resultTitle").textContent = namedMode ? `${sideName(winner)}胜利` : (playerWon ? "胜利" : "失败");
+      el("resultText").textContent = state.mode === "touchdown"
+        ? `${reason} 用时 ${state.time} 秒，回合数 ${state.turn}。比分：${sideName("player")} ${state.touchdown.playerScore} : ${state.touchdown.enemyScore} ${sideName("enemy")}。`
+        : namedMode
+        ? `${reason} 用时 ${state.time} 秒，回合数 ${state.turn}。`
+        : `${reason} 用时 ${state.time} 秒，回合数 ${state.turn}。电脑卡组：${state.selectedEnemyDeck.name}。`;
+      el("resultModal").classList.add("active");
+    }
+
+    function stopAuto() {
+      if (state) {
+        state.auto = false;
+        if (state.mode === "demo") state.demoPaused = true;
+      }
+      clearInterval(autoTimer);
+      autoTimer = null;
+      el("autoBtn").textContent = state && state.mode === "demo" ? "继续演示" : "自动推进：关";
+    }
+
+    function toggleAuto() {
+      if (!state || state.gameOver) return;
+      if (state.mode === "demo") {
+        toggleDemoPause();
+        return;
+      }
+      state.auto = !state.auto;
+      if (state.auto) {
+        el("autoBtn").textContent = "自动推进：开";
+        autoTimer = setInterval(() => {
+          if (state.gameOver) return stopAuto();
+          skipTurn();
+        }, 650);
+      } else {
+        stopAuto();
+      }
+    }
+
+    function startDemoLoop() {
+      if (!state || state.mode !== "demo" || state.gameOver) return;
+      clearInterval(autoTimer);
+      state.demoPaused = false;
+      state.auto = true;
+      const speed = DEMO_SPEEDS[state.demoSpeedIndex] || DEMO_SPEEDS[2];
+      autoTimer = setInterval(demoStep, speed.delay);
+      renderBattle();
+    }
+
+    function toggleDemoPause() {
+      if (state.demoPaused) {
+        startDemoLoop();
+      } else {
+        state.demoPaused = true;
+        state.auto = false;
+        clearInterval(autoTimer);
+        autoTimer = null;
+        renderBattle();
+      }
+    }
+
+    function adjustDemoSpeed(delta) {
+      if (!state || state.mode !== "demo") return;
+      state.demoSpeedIndex = Math.max(0, Math.min(DEMO_SPEEDS.length - 1, state.demoSpeedIndex + delta));
+      if (!state.demoPaused) startDemoLoop();
+      else renderBattle();
+    }
+
+    function demoStep() {
+      if (!state || state.mode !== "demo") return;
+      if (state.gameOver) return stopAuto();
+      if (state.demoPaused) return;
+      gainElixir("player");
+      gainElixir("enemy");
+      aiTurn("player", { skipGain: true });
+      if (state.gameOver) return renderBattle();
+      aiTurn("enemy", { skipGain: true });
+      if (state.gameOver) return renderBattle();
+      resolveTurn({ noGain: true });
+      advanceClock();
+      renderBattle();
+    }
+
+    el("cardList").addEventListener("click", event => {
+      const btn = event.target.closest("[data-card]");
+      if (btn) toggleCard(btn.dataset.card);
+    });
+    el("deckSlots").addEventListener("click", event => {
+      const btn = event.target.closest("[data-remove]");
+      if (btn) toggleCard(btn.dataset.remove);
+    });
+    el("modeRow").addEventListener("click", event => {
+      const btn = event.target.closest("[data-mode]");
+      if (!btn) return;
+      gameMode = btn.dataset.mode;
+      if (isSinglePlayerSetupMode()) editingSide = "player";
+      saveSetup();
+      renderSetup();
+    });
+    el("difficultyRow").addEventListener("click", event => {
+      const btn = event.target.closest("[data-difficulty]");
+      if (!btn) return;
+      aiDifficulty = btn.dataset.difficulty;
+      saveSetup();
+      renderSetup();
+    });
+    el("editorTabs").addEventListener("click", event => {
+      const btn = event.target.closest("[data-edit-side]");
+      if (!btn) return;
+      editingSide = btn.dataset.editSide;
+      renderSetup();
+    });
+    el("playerHandGrid").addEventListener("click", event => {
+      const btn = event.target.closest("[data-hand]");
+      if (btn) selectHand(btn.dataset.side, Number(btn.dataset.hand));
+    });
+    el("enemyHandGrid").addEventListener("click", event => {
+      const btn = event.target.closest("[data-hand]");
+      if (btn) selectHand(btn.dataset.side, Number(btn.dataset.hand));
+    });
+    el("playerPlacementGrid").addEventListener("click", event => {
+      const btn = event.target.closest("[data-place]");
+      if (btn) playSelected(btn.dataset.side, btn.dataset.place);
+    });
+    el("enemyPlacementGrid").addEventListener("click", event => {
+      const btn = event.target.closest("[data-place]");
+      if (btn) playSelected(btn.dataset.side, btn.dataset.place);
+    });
+    el("arenaBoard").addEventListener("click", event => {
+      const btn = event.target.closest("[data-board-row]");
+      if (!btn) return;
+      playBoardCell(Number(btn.dataset.boardRow), btn.dataset.boardLane);
+    });
+    ["searchInput", "typeFilter", "costFilter"].forEach(id => el(id).addEventListener("input", renderSetup));
+    el("startBtn").addEventListener("click", startBattle);
+    el("randomBtn").addEventListener("click", randomBalancedDeck);
+    el("clearBtn").addEventListener("click", () => {
+      setActiveSetupDeck([]);
+      renderSetup();
+    });
+    el("playerSkipBtn").addEventListener("click", () => skipTurn("player"));
+    el("enemySkipBtn").addEventListener("click", () => skipTurn("enemy"));
+    el("autoBtn").addEventListener("click", toggleAuto);
+    el("demoSlowerBtn").addEventListener("click", () => adjustDemoSpeed(-1));
+    el("demoFasterBtn").addEventListener("click", () => adjustDemoSpeed(1));
+    el("backBtn").addEventListener("click", () => {
+      stopAuto();
+      showScreen("setup");
+      renderSetup();
+    });
+    el("rematchBtn").addEventListener("click", () => {
+      el("resultModal").classList.remove("active");
+      startBattle();
+    });
+    el("newDeckBtn").addEventListener("click", () => {
+      el("resultModal").classList.remove("active");
+      showScreen("setup");
+      renderSetup();
+    });
+
+    try {
+      const saved = JSON.parse(localStorage.getItem("textRoyaleDeck") || "[]");
+      selectedDeck = saved.filter(name => cardByName.has(name)).slice(0, 8);
+    } catch {
+      selectedDeck = [];
+    }
+    try {
+      const savedB = JSON.parse(localStorage.getItem("textRoyaleDeckB") || "[]");
+      selectedEnemyHumanDeck = savedB.filter(name => cardByName.has(name)).slice(0, 8);
+    } catch {
+      selectedEnemyHumanDeck = [];
+    }
+    {
+      const savedMode = localStorage.getItem("textRoyaleMode");
+      gameMode = savedMode === "duel" || savedMode === "demo" || savedMode === "touchdown" ? savedMode : "ai";
+    }
+    {
+      const savedDifficulty = localStorage.getItem("textRoyaleDifficulty");
+      aiDifficulty = AI_DIFFICULTIES[savedDifficulty] ? savedDifficulty : "normal";
+    }
+    editingSide = "player";
+    renderSetup();
+  </script>
+</body>
+</html>
