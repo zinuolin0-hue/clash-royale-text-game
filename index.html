@@ -1154,6 +1154,7 @@ Witch|女巫
 Barbarians|野蛮人
 Golem|戈仑石人
 Golemite|小戈仑石人
+Lava Pup|小猎犬
 Skeletons|骷髅兵
 Valkyrie|瓦基丽武神
 Skeleton Army|骷髅军团
@@ -1362,6 +1363,8 @@ Vines|藤蔓
     const noAttackBuildings = set(["Elixir Collector", "Goblin Cage", "Goblin Hut", "Barbarian Hut", "Tombstone", "Furnace", "Goblin Drill"]);
     const infernoBeamNames = set(["Inferno Tower", "Inferno Dragon"]);
     const spawnerProfiles = {
+      "Night Witch": { spawnName: "Bats", spawnEvery: 0, spawnSeconds: 5, firstSpawnSeconds: 1, spawnCount: 2, deathSpawnName: "Bats", deathSpawnCount: 1 },
+      "Lava Hound": { deathSpawnName: "Lava Pup", deathSpawnCount: 6 },
       "Goblin Hut": { spawnName: "Spear Goblins", spawnEvery: 2, spawnCount: 1, deathSpawnName: "Spear Goblins", deathSpawnCount: 3, life: 11 },
       "Barbarian Hut": { spawnName: "Barbarians", spawnEvery: 5, spawnCount: 3, deathSpawnName: "Barbarians", deathSpawnCount: 1, life: 10 },
       "Tombstone": { spawnName: "Skeletons", spawnEvery: 2, spawnCount: 2, deathSpawnName: "Skeletons", deathSpawnCount: 4, life: 10 },
@@ -1472,7 +1475,7 @@ Vines|藤蔓
       if (card.type === "Building") {
         badges.push(card.attacks ? "攻击建筑" : "无攻击建筑");
         if (card.name === "Elixir Collector") badges.push("产圣水");
-        if (card.spawnEvery > 0) badges.push(`定时出${cardName(card.spawnName)}`);
+        if (card.spawnEvery > 0 || card.spawnSeconds > 0) badges.push(`定时出${cardName(card.spawnName)}`);
         if (card.deathSpawnCount > 0) badges.push(`破裂出${cardName(card.deathSpawnName)}`);
         if (infernoBeamNames.has(card.name)) badges.push("递增射线");
       } else {
@@ -1539,6 +1542,8 @@ Vines|藤蔓
         speed,
         attacks,
         spawnEvery: spawner.spawnEvery || 0,
+        spawnSeconds: spawner.spawnSeconds || 0,
+        firstSpawnSeconds: spawner.firstSpawnSeconds || 0,
         spawnName: spawner.spawnName || "",
         spawnCount: spawner.spawnCount || 0,
         deathSpawnName: spawner.deathSpawnName || "",
@@ -3377,6 +3382,9 @@ Vines|藤蔓
         canJumpRiver: riverJumpers.has(card.name),
         attacks: card.attacks,
         spawnEvery: card.spawnEvery,
+        spawnSeconds: card.spawnSeconds || 0,
+        firstSpawnSeconds: card.firstSpawnSeconds || 0,
+        spawnCooldown: card.spawnSeconds ? cooldownTurns(card.firstSpawnSeconds || card.spawnSeconds) : 0,
         frozen: 0,
         rage: 0,
         rooted: 0,
@@ -3725,6 +3733,16 @@ Vines|藤蔓
       }
     }
 
+    function spawnManyAround(side, cardNameValue, lane, pos, amount, scale = 0.65) {
+      const lanes = lanesAround(lane);
+      const center = (amount - 1) / 2;
+      for (let i = 0; i < amount; i++) {
+        const spawnLane = lanes[i % lanes.length];
+        const posOffset = (i - center) * 0.16;
+        spawnUnit(side, cardNameValue, spawnLane, clampPos(pos + posOffset), scale, { jitter: false });
+      }
+    }
+
     function spawnUnit(side, name, lane, pos, scale = 0.75, overrides = {}) {
       const card = cardByName.get(name) || virtualCard(name);
       const jitter = overrides.jitter === false ? 0 : (Math.random() - 0.5) * 0.8;
@@ -3825,6 +3843,39 @@ Vines|藤蔓
           speed: 0.75,
           attacks: true,
           spawnEvery: 0,
+          spawnName: "",
+          spawnCount: 0,
+          deathSpawnName: "",
+          deathSpawnCount: 0,
+          buildingLife: 0,
+          shieldHp: 0
+        };
+      }
+      if (name === "Lava Pup") {
+        return {
+          name,
+          zh: cardName(name),
+          cost: 0,
+          rarity: "legendary",
+          type: "Troop",
+          count: 1,
+          isAir: true,
+          isRanged: true,
+          isSplash: false,
+          isSwarm: false,
+          isBuildingTargeter: false,
+          isWinCondition: false,
+          diesOnAttack: false,
+          canHitAir: true,
+          canHitGround: true,
+          hp: 245,
+          damage: 68,
+          range: 1.8,
+          speed: 1.2,
+          attacks: true,
+          spawnEvery: 0,
+          spawnSeconds: 0,
+          firstSpawnSeconds: 0,
           spawnName: "",
           spawnCount: 0,
           deathSpawnName: "",
@@ -4757,6 +4808,14 @@ Vines|藤蔓
         });
         return `${sideName(unit.side)}的 ${cardName(unit.name)} 被击倒，在原地留下炸弹，约 ${fuse} 回合后爆炸。`;
       }
+      if (unit.name === "Night Witch") {
+        spawnManyAround(unit.side, "Bats", lane, clampPos(pos), 1, 0.62);
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 被击倒，最后召唤出 1 只${cardName("Bats")}。`;
+      }
+      if (unit.name === "Lava Hound") {
+        spawnManyAround(unit.side, "Lava Pup", lane, clampPos(pos), 6, 0.9);
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 爆裂成 6 只${cardName("Lava Pup")}，小猎犬开始攻击附近目标。`;
+      }
       if (unit.name === "Battle Ram") {
         spawnMany(unit.side, "Barbarians", lane, clampPos(pos), 2, 0.62);
         return `${sideName(unit.side)}的 ${cardName(unit.name)} 解体，两个野蛮人继续作战。`;
@@ -4925,11 +4984,22 @@ Vines|藤蔓
 
     function spawnFromBuildings() {
       state.units.forEach(unit => {
-        if (unit.hp <= 0 || unit.spawnEvery <= 0 || state.turn % unit.spawnEvery !== 0) return;
+        if (unit.hp <= 0 || !unit.spawnName || unit.spawnCount <= 0) return;
+        if (unit.spawnSeconds > 0) {
+          unit.spawnCooldown = Math.max(0, (unit.spawnCooldown || cooldownTurns(unit.spawnSeconds)) - 1);
+          if (unit.spawnCooldown > 0) return;
+          unit.spawnCooldown = cooldownTurns(unit.spawnSeconds);
+        } else if (unit.spawnEvery <= 0 || state.turn % unit.spawnEvery !== 0) {
+          return;
+        }
         const spawnName = unit.spawnName;
         const count = Math.max(1, unit.spawnCount || 1);
-        for (let i = 0; i < count; i++) {
-          spawnUnit(unit.side, spawnName, unit.lane, unit.pos + (unit.side === "player" ? -0.6 : 0.6), 0.62);
+        if (unit.type === "Building") {
+          for (let i = 0; i < count; i++) {
+            spawnUnit(unit.side, spawnName, unit.lane, unit.pos + (unit.side === "player" ? -0.6 : 0.6), 0.62);
+          }
+        } else {
+          spawnManyAround(unit.side, spawnName, unit.lane, unit.pos + (unit.side === "player" ? -0.42 : 0.42), count, 0.62);
         }
         log(`${sideName(unit.side)}的 ${cardName(unit.name)} 产出了 ${count} 个${cardName(spawnName)}。`);
       });
