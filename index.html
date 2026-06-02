@@ -1153,6 +1153,7 @@ Balloon|气球兵
 Witch|女巫
 Barbarians|野蛮人
 Golem|戈仑石人
+Golemite|小戈仑石人
 Skeletons|骷髅兵
 Valkyrie|瓦基丽武神
 Skeleton Army|骷髅军团
@@ -2198,6 +2199,7 @@ Vines|藤蔓
         countdownFlags: { before180: false, suddenDeath: false, final10: false },
         units: [],
         effects: [],
+        pendingExplosions: [],
         nextId: 1,
         gameOver: false,
         auto: false,
@@ -2958,6 +2960,12 @@ Vines|藤蔓
       });
       state.effects.forEach(effect => {
         if (effect.kind === "beam" && beamCoversCell(effect, row, lane)) details.push("地狱塔/地狱飞龙一类的持续锁定光线经过这里");
+        if (effect.kind === "blast" && blastCoversCell(effect, row, lane)) details.push(`${effect.label || "爆炸"}的范围覆盖这里`);
+      });
+      (state.pendingExplosions || []).forEach(bomb => {
+        if (Math.round(bomb.pos) === row && laneOccupiesCell(bomb.lane, lane)) {
+          details.push(`${sideName(bomb.side)}的${bomb.label}，还剩 ${bomb.fuse} 回合爆炸`);
+        }
       });
       return details.length
         ? `${laneLabel(lane)}第 ${row} 行：${details.join("；")}`
@@ -3007,6 +3015,14 @@ Vines|藤蔓
         if (effect.kind === "beam" && beamCoversCell(effect, row, lane)) {
           parts.push({ className: "beam", text: "线:地狱" });
         }
+        if (effect.kind === "blast" && blastCoversCell(effect, row, lane)) {
+          parts.push({ className: "beam", text: `爆:${effect.short || "炸"}` });
+        }
+      });
+      (state.pendingExplosions || []).forEach(bomb => {
+        if (Math.round(bomb.pos) === row && laneOccupiesCell(bomb.lane, lane)) {
+          parts.push({ className: bomb.side, text: `弹:${bomb.short || "炸"}` });
+        }
       });
       return parts.slice(0, 2);
     }
@@ -3019,6 +3035,10 @@ Vines|藤蔓
       const ratio = (row - effect.fromPos) / span;
       const projectedLane = laneIndex(effect.fromLane) + (laneIndex(effect.toLane) - laneIndex(effect.fromLane)) * Math.max(0, Math.min(1, ratio));
       return Math.abs(laneIndex(lane) - projectedLane) <= 0.55;
+    }
+
+    function blastCoversCell(effect, row, lane) {
+      return areaDistance(effect.lane, effect.pos, lane, row) <= (effect.radius || 2.4);
     }
 
     function mapSide(side) {
@@ -3782,6 +3802,37 @@ Vines|藤蔓
           shieldHp: 0
         };
       }
+      if (name === "Golemite") {
+        return {
+          name,
+          zh: cardName(name),
+          cost: 0,
+          rarity: "epic",
+          type: "Troop",
+          count: 1,
+          isAir: false,
+          isRanged: false,
+          isSplash: false,
+          isSwarm: false,
+          isBuildingTargeter: true,
+          isWinCondition: true,
+          diesOnAttack: false,
+          canHitAir: false,
+          canHitGround: true,
+          hp: 980,
+          damage: 95,
+          range: 0.75,
+          speed: 0.75,
+          attacks: true,
+          spawnEvery: 0,
+          spawnName: "",
+          spawnCount: 0,
+          deathSpawnName: "",
+          deathSpawnCount: 0,
+          buildingLife: 0,
+          shieldHp: 0
+        };
+      }
       if (name === "Goblin Brawler") {
         return {
           name,
@@ -4302,6 +4353,7 @@ Vines|藤蔓
       }
       state.effects = [];
       tickUnitsStart();
+      processPendingExplosions();
       maybeUseChampionAbility("player", "combat");
       maybeUseChampionAbility("enemy", "combat");
       towerFire("player");
@@ -4344,6 +4396,25 @@ Vines|藤蔓
         }
         if (unit.type === "Building") unit.life--;
       });
+    }
+
+    function processPendingExplosions() {
+      if (!state.pendingExplosions?.length) return;
+      const remaining = [];
+      state.pendingExplosions.forEach(bomb => {
+        bomb.fuse--;
+        if (bomb.fuse <= 0) explodeDelayedBomb(bomb);
+        else remaining.push(bomb);
+      });
+      state.pendingExplosions = remaining;
+    }
+
+    function explodeDelayedBomb(bomb) {
+      const hits = applyDeathExplosion(bomb.side, bomb.lane, bomb.pos, bomb.damage, bomb.towerDamage, bomb.radius, bomb.label, {
+        knock: bomb.knock || 0,
+        short: bomb.short || "炸"
+      });
+      log(`${sideName(bomb.side)}的 ${bomb.label} 爆炸，波及 ${hits.units} 个单位${hits.towers ? `和 ${hits.towers} 座塔` : ""}。`);
     }
 
     function towerFire(side) {
@@ -4661,6 +4732,31 @@ Vines|藤蔓
     function releaseDeathPayload(unit, lane = unit.lane, pos = unit.pos) {
       if (unit.payloadReleased) return "";
       unit.payloadReleased = true;
+      if (unit.name === "Golem") {
+        const hits = applyDeathExplosion(unit.side, lane, pos, 245, 86, 2.25, cardName(unit.name), { knock: 0.45, short: "戈仑" });
+        spawnGolemites(unit.side, lane, pos);
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 倒下时爆炸，波及 ${hits.units} 个单位${hits.towers ? `和 ${hits.towers} 座塔` : ""}，并分裂成两个${cardName("Golemite")}。`;
+      }
+      if (unit.name === "Golemite") {
+        const hits = applyDeathExplosion(unit.side, lane, pos, 96, 34, 1.45, cardName(unit.name), { knock: 0.2, short: "小戈" });
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 倒下时爆出一圈碎石，波及 ${hits.units} 个单位${hits.towers ? `和 ${hits.towers} 座塔` : ""}。`;
+      }
+      if (unit.name === "Giant Skeleton") {
+        const fuse = deathBombTurns(3);
+        state.pendingExplosions.push({
+          side: unit.side,
+          lane,
+          pos: clampPos(pos),
+          fuse,
+          damage: 690,
+          towerDamage: 285,
+          radius: 2.85,
+          knock: 0.55,
+          label: `${cardName(unit.name)}炸弹`,
+          short: "骷巨"
+        });
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 被击倒，在原地留下炸弹，约 ${fuse} 回合后爆炸。`;
+      }
       if (unit.name === "Battle Ram") {
         spawnMany(unit.side, "Barbarians", lane, clampPos(pos), 2, 0.62);
         return `${sideName(unit.side)}的 ${cardName(unit.name)} 解体，两个野蛮人继续作战。`;
@@ -4674,6 +4770,27 @@ Vines|藤蔓
         return `${sideName(unit.side)}的 ${cardName(unit.name)} 露出两个哥布林。`;
       }
       return "";
+    }
+
+    function deathBombTurns(seconds) {
+      return Math.max(1, Math.ceil(seconds / phaseInfo(state.time).seconds));
+    }
+
+    function applyDeathExplosion(side, lane, pos, damage, towerDamage, radius, label, options = {}) {
+      const units = areaDamage(side, lane, pos, damage, { radius, knock: options.knock || 0 });
+      const enemy = side === "player" ? "enemy" : "player";
+      const towers = damageTowersInArea(enemy, lane, pos, towerDamage, radius, label);
+      state.effects.push({ kind: "blast", lane, pos, radius, label, short: options.short || "炸" });
+      return { units, towers };
+    }
+
+    function spawnGolemites(side, lane, pos) {
+      const lanes = lanesAround(lane).slice(0, 2);
+      const dir = side === "player" ? 1 : -1;
+      lanes.forEach((spawnLane, index) => {
+        const offset = index === 0 ? -0.28 : 0.28;
+        spawnUnit(side, "Golemite", spawnLane, clampPos(pos + offset * dir), 1, { jitter: false });
+      });
     }
 
     function releaseBuildingPayload(unit) {
@@ -4770,6 +4887,7 @@ Vines|藤蔓
       td.round++;
       state.units = [];
       state.effects = [];
+      state.pendingExplosions = [];
       state.playerElixir = 5;
       state.enemyElixir = 5;
       state.pendingActions = { player: false, enemy: true };
