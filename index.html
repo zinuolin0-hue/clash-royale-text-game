@@ -67,13 +67,38 @@
       display: flex;
       align-items: flex-end;
       justify-content: space-between;
+      flex-wrap: wrap;
       gap: 18px;
       margin-bottom: 16px;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      flex: 1 1 520px;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .title-logo {
+      width: clamp(46px, 7vw, 72px);
+      height: clamp(46px, 7vw, 72px);
+      flex: 0 0 auto;
+      object-fit: contain;
+      border-radius: 8px;
+      border: 1px solid rgba(217, 224, 235, 0.9);
+      background: #fff;
+    }
+
+    .brand-copy {
+      flex: 1 1 auto;
+      min-width: 0;
     }
 
     h1 {
       margin: 0;
       font-size: clamp(26px, 4vw, 42px);
+      line-height: 1.08;
       letter-spacing: 0;
     }
 
@@ -683,6 +708,36 @@
       line-height: 1.18;
     }
 
+    .ability-panel {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .ability-button {
+      min-height: 54px;
+      padding: 8px 10px;
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 9px;
+      align-items: center;
+      text-align: left;
+      border-color: #d8c0ef;
+      background: #fbf7ff;
+    }
+
+    .ability-button strong {
+      display: block;
+      line-height: 1.18;
+    }
+
+    .ability-button small {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      line-height: 1.25;
+    }
+
     .battle-actions {
       display: flex;
       flex-wrap: wrap;
@@ -765,6 +820,10 @@
         flex-direction: column;
       }
 
+      .brand-row {
+        align-items: flex-start;
+      }
+
       .status-pills {
         justify-content: flex-start;
       }
@@ -781,6 +840,16 @@
     @media (max-width: 560px) {
       .app {
         padding: 14px;
+      }
+
+      .brand-row {
+        gap: 10px;
+      }
+
+      .title-logo {
+        width: 42px;
+        height: 42px;
+        margin-top: 2px;
       }
 
       .filters,
@@ -801,9 +870,12 @@
 <body>
   <main class="app">
     <div class="topbar">
-      <div>
-        <h1>文字版皇室战争</h1>
-        <div class="subtitle">选 8 张卡，进入文字竞技场。前 2 分钟为单倍圣水；120 秒后进入双倍圣水，180 秒后进入一塔决胜，240 秒后进入三倍圣水，300 秒终局结算。</div>
+      <div class="brand-row">
+        <img class="title-logo" src="assets/title-logo.png" alt="文字版皇室战争标志" width="72" height="72">
+        <div class="brand-copy">
+          <h1>文字版皇室战争</h1>
+          <div class="subtitle">选 8 张卡，进入文字竞技场。前 2 分钟为单倍圣水；120 秒后进入双倍圣水，180 秒后进入一塔决胜，240 秒后进入三倍圣水，300 秒终局结算。</div>
+        </div>
       </div>
       <div class="status-pills" id="topPills"></div>
     </div>
@@ -824,12 +896,9 @@
                 <option value="Building">建筑</option>
                 <option value="Spell">法术</option>
               </select>
-              <select id="costFilter">
-                <option value="all">全部圣水</option>
-                <option value="0-2">0-2 费</option>
-                <option value="3-4">3-4 费</option>
-                <option value="5-6">5-6 费</option>
-                <option value="7-9">7-9 费</option>
+              <select id="sortFilter">
+                <option value="cost">按圣水花费排列</option>
+                <option value="rarity">按卡牌稀有度排列</option>
               </select>
             </div>
             <div class="card-list" id="cardList"></div>
@@ -888,6 +957,7 @@
           <div class="panel-body">
             <div class="side-status" id="playerSideStatus"></div>
             <div class="hand-grid" id="playerHandGrid"></div>
+            <div class="ability-panel" id="playerAbilityPanel"></div>
             <div class="placement-grid" id="playerPlacementGrid"></div>
             <div class="battle-actions">
               <button class="secondary" id="playerSkipBtn">存圣水，本回合不下牌</button>
@@ -925,6 +995,7 @@
           <div class="panel-body">
             <div class="side-status" id="enemySideStatus"></div>
             <div class="hand-grid" id="enemyHandGrid"></div>
+            <div class="ability-panel" id="enemyAbilityPanel"></div>
             <div class="placement-grid" id="enemyPlacementGrid"></div>
             <div class="battle-actions">
               <button class="secondary" id="enemySkipBtn">存圣水，本回合不下牌</button>
@@ -1157,6 +1228,7 @@ Goblinstein|哥布林斯坦
 Rune Giant|符文巨人
 Berserker|狂战士
 Boss Bandit|刺客首领
+Guardienne|守卫女武神
 Cannon|加农炮
 Goblin Hut|哥布林小屋
 Mortar|迫击炮
@@ -1202,6 +1274,7 @@ Vines|藤蔓
 `.trim().split("\n").map(line => line.split("|")));
 
     const RARITY_CN = { common: "普通", rare: "稀有", epic: "史诗", legendary: "传奇", champion: "英雄" };
+    const RARITY_SORT_ORDER = { champion: 0, legendary: 1, epic: 2, rare: 3, common: 4 };
 
     const PLACEMENTS = [
       { id: "kingLeft", label: "国王塔左侧", lane: "L", playerPos: 16.2, enemyPos: 3.8, kind: "safe" },
@@ -1210,14 +1283,14 @@ Vines|藤蔓
       { id: "rightBridge", label: "右侧桥头", lane: "R", playerPos: 10.8, enemyPos: 9.2, kind: "bridge" },
       { id: "middle", label: "半场中间", lane: "M", playerPos: 14.2, enemyPos: 5.8, kind: "middle" }
     ];
-        const LANES = [
-          { id: "L", label: "\u5de6\u8def" },
-          { id: "LL", label: "\u5de6\u4e2d" },
-          { id: "ML", label: "\u4e2d\u5de6" },
-          { id: "MR", label: "\u4e2d\u53f3" },
-          { id: "RR", label: "\u53f3\u4e2d" },
-          { id: "R", label: "\u53f3\u8def" }
-              ];
+    const LANES = [
+      { id: "L", label: "左路" },
+      { id: "LL", label: "左中" },
+      { id: "ML", label: "中左" },
+      { id: "MR", label: "中右" },
+      { id: "RR", label: "右中" },
+      { id: "R", label: "右路" }
+    ];
     const TOWER_BALANCE = {
       princess: { hp: 3052, damage: 109, dps: 136, hitSpeed: 0.8, range: 5.6 },
       king: { hp: 4824, damage: 109, dps: 109, hitSpeed: 1.0, range: 5.1, activationSeconds: 4 }
@@ -1297,7 +1370,7 @@ Vines|藤蔓
       "Elixir Collector": { life: 14 }
     };
     const winConditions = set(["Hog Rider", "Giant", "Golem", "Balloon", "Royal Giant", "Lava Hound", "Battle Ram", "Ram Rider", "Skeleton Barrel", "Wall Breakers", "Royal Hogs", "Goblin Giant", "Elixir Golem", "Electro Giant", "Goblin Barrel", "Graveyard", "Goblin Drill", "X-Bow", "Mortar", "Mega Knight", "Giant Skeleton", "Goblinstein", "Rune Giant"]);
-    const riverJumpers = set(["Hog Rider", "Royal Hogs", "Prince", "Dark Prince", "Ram Rider"]);
+    const riverJumpers = set(["Hog Rider", "Royal Hogs", "Prince", "Dark Prince", "Ram Rider", "Cursed Hog"]);
     const diesOnAttackNames = set(["Ice Spirit", "Fire Spirit", "Electro Spirit", "Heal Spirit", "Skeleton Barrel", "Battle Ram", "Suspicious Bush", "Wall Breakers"]);
     const ownHalfOnlySpells = set(["The Log", "Barbarian Barrel", "Royal Delivery"]);
     const spellAreas = {
@@ -1365,6 +1438,11 @@ Vines|藤蔓
       return RARITY_CN[rarity] || rarity;
     }
 
+    function cardSortValue(card, sort) {
+      if (sort === "rarity") return RARITY_SORT_ORDER[card.rarity] ?? 99;
+      return card.name === "Spirit Empress" ? 3 : card.cost;
+    }
+
     function cardListText(names) {
       return names.map(cardName).join(" / ");
     }
@@ -1381,6 +1459,7 @@ Vines|藤蔓
       if (card.name === "Goblin Gang") return ["6人单位", "3刀3矛", "含防空"];
       if (card.name === "Rascals") return ["3人单位", "1男2女", "含防空"];
       if (card.name === "Guards") return ["3人单位", "带盾", "地面", "不防空"];
+      if (CHAMPION_ABILITIES[card.name]) return ["英雄技能", `${CHAMPION_ABILITIES[card.name].cost}费`, CHAMPION_ABILITIES[card.name].label];
       if (card.type === "Spell") {
         const badges = [ownHalfOnlySpells.has(card.name) ? "己方半场" : "全场法术"];
         const area = spellAreas[card.name];
@@ -1476,6 +1555,7 @@ Vines|藤蔓
     let state = null;
     let selectedHandIndex = { player: null, enemy: null };
     let boardActiveSide = "player";
+    let recentRandomDecks = [];
     let autoTimer = null;
     const DEMO_SPEEDS = [
       { label: "0.5x", delay: 1600 },
@@ -1507,6 +1587,17 @@ Vines|藤蔓
         label: "法老",
         hint: "终极地狱难度：会优先挑克制玩家卡组的热门套牌，并以 Mohamed Light 式资源管理推断轮转、抓关键窗口、最低成本防守和终局斩杀。"
       }
+    };
+
+    const CHAMPION_ABILITIES = {
+      "Archer Queen": { label: "隐身披风", cost: 1, cooldown: 17, duration: 3.5, summary: "短暂隐身，并大幅提高输出。" },
+      "Golden Knight": { label: "冲刺突袭", cost: 1, cooldown: 12, duration: 0, summary: "向附近敌人连续冲刺，造成连锁伤害。" },
+      "Skeleton King": { label: "亡魂召唤", cost: 2, cooldown: 20, duration: 0, summary: "根据收集的灵魂召唤骷髅。" },
+      "Mighty Miner": { label: "爆破遁走", cost: 1, cooldown: 13, duration: 0, summary: "钻到对侧路线，并在原地引爆炸弹。" },
+      "Monk": { label: "冥想护体", cost: 1, cooldown: 17, duration: 4, summary: "短时间大幅减伤，并反震近身攻击者。" },
+      "Little Prince": { label: "皇家救援", cost: 3, cooldown: 30, duration: 0, summary: "召唤守卫女武神冲锋击退地面单位。" },
+      "Goblinstein": { label: "闪电连接", cost: 2, cooldown: 17, duration: 4, summary: "用电链持续伤害附近空地目标。" },
+      "Boss Bandit": { label: "脱身烟弹", cost: 1, cooldown: 3, duration: 1.5, uses: 2, summary: "后撤隐身并震开附近敌人，每次部署最多两次。" }
     };
 
     const el = id => document.getElementById(id);
@@ -1589,17 +1680,12 @@ Vines|藤蔓
       const deck = activeSetupDeck();
       const q = el("searchInput").value.trim().toLowerCase();
       const type = el("typeFilter").value;
-      const cost = el("costFilter").value;
+      const sort = el("sortFilter").value;
       const filtered = CARDS.filter(card => {
         if (q && !`${card.name} ${card.zh}`.toLowerCase().includes(q)) return false;
         if (type !== "all" && card.type !== type) return false;
-        if (cost !== "all") {
-          const [min, max] = cost.split("-").map(Number);
-          const costs = card.name === "Spirit Empress" ? [3, 6] : [card.cost];
-          if (!costs.some(value => value >= min && value <= max)) return false;
-        }
         return true;
-      });
+      }).sort((a, b) => cardSortValue(a, sort) - cardSortValue(b, sort) || a.cost - b.cost || a.zh.localeCompare(b.zh, "zh-Hans-CN"));
 
       el("cardList").innerHTML = filtered.map(card => {
         const picked = deck.includes(card.name);
@@ -1674,11 +1760,380 @@ Vines|藤蔓
       renderSetup();
     }
 
-    
- 
-   
- 
-   function randomBalancedDeck(){const sm=["The Log","Zap","Giant Snowball","Barbarian Barrel","Arrows","Royal Delivery"],bg=["Fireball","Poison","Earthquake","Lightning","Rocket","Freeze","Tornado","Void","Vines","Goblin Curse"],ban=["Mirror","Clone","Elixir Collector"],plans=[[["Hog Rider","Royal Hogs","Battle Ram","Ram Rider","Wall Breakers"],["Miner","Wall Breakers"],2.6,3.7,.7,.25],[["Goblin Barrel","Skeleton Barrel","Goblin Drill","Miner"],["Skeleton Barrel","Goblin Drill","Miner","Wall Breakers"],2.8,3.9,.55,.35],[["Graveyard","Miner"],["Miner"],3.2,4.3,.55,.15],[["X-Bow","Mortar"],["Miner","Skeleton Barrel","Wall Breakers"],2.8,4,.75,.12],[["Giant","Golem","Goblin Giant","Electro Giant","Rune Giant"],["Balloon","Miner"],3.8,5.1,.22,.2],[["Lava Hound","Balloon"],["Balloon","Miner"],3.6,4.9,.18,.55],[["Royal Giant","Goblin Giant","Electro Giant"],["Miner"],3.4,4.6,.28,.12],[["Battle Ram","Ram Rider","Royal Hogs","Wall Breakers"],["Miner","Wall Breakers"],3.2,4.4,.35,.28]],recent=randomBalancedDeck.recent||[],ok=c=>c&&!ban.includes(c.name),pick=a=>a[Math.floor(Math.random()*a.length)],pool=f=>CARDS.filter(c=>ok(c)&&f(c)),add=(d,n)=>{const c=cardByName.get(n);if(ok(c)&&!d.includes(n)&&d.length<8){d.push(n);return 1}return 0},stats=d=>{const cs=d.map(n=>cardByName.get(n)).filter(Boolean),avg=cs.reduce((s,c)=>s+c.cost,0)/Math.max(1,cs.length);return{cs,avg,w:cs.filter(c=>c.isWinCondition).length,sp:cs.filter(c=>c.type==="Spell").length,ss:cs.filter(c=>sm.includes(c.name)).length,aa:cs.filter(c=>c.type!=="Spell"&&c.canHitAir&&c.attacks).length,sl:cs.filter(c=>c.type!=="Spell"&&c.isSplash).length,bd:cs.filter(c=>c.type==="Building").length,tk:cs.filter(c=>highDpsNames.has(c.name)||infernoBeamNames.has(c.name)).length,hv:cs.filter(c=>c.cost>=6).length,hw:cs.filter(c=>c.isWinCondition&&c.cost>=5).length,ch:cs.filter(c=>c.cost<=3).length}},fill=(d,f)=>{const s=stats(d),a=shuffle(pool(c=>!d.includes(c.name)&&(!c.isWinCondition||s.w<1)&&(c.type!=="Building"||s.bd<2)&&f(c)));if(a[0])d.push(a[0].name)},build=p=>{let d=[];add(d,pick(p[0]));if(Math.random()<p[5])add(d,pick(p[1]));if(d.includes("Lava Hound")&&Math.random()<.8)add(d,"Balloon");if(d.includes("Goblin Barrel")){Math.random()<.75&&add(d,"Princess");Math.random()<.7&&add(d,"Goblin Gang")}if(d.includes("Graveyard")){Math.random()<.7&&add(d,"Poison");Math.random()<.35&&add(d,"Baby Dragon")}if(d.includes("Royal Giant")){Math.random()<.6&&add(d,"Fisherman");Math.random()<.5&&add(d,"Hunter")}if(d.includes("X-Bow"))add(d,"Tesla");if(d.includes("Mortar")&&Math.random()<.5)add(d,"Miner");fill(d,c=>sm.includes(c.name));fill(d,c=>c.type==="Spell"&&bg.concat(sm).includes(c.name));Math.random()<p[4]&&fill(d,c=>c.type==="Building"&&!c.isWinCondition);for(let g=0;stats(d).aa<2&&g++<6;)fill(d,c=>c.type!=="Spell"&&c.canHitAir&&c.attacks);if(!stats(d).sl)fill(d,c=>c.type!=="Spell"&&c.isSplash);if(!stats(d).tk&&!stats(d).bd)fill(d,c=>c.type!=="Spell"&&(highDpsNames.has(c.name)||infernoBeamNames.has(c.name)||c.type==="Building"));for(let g=0;stats(d).ch<2&&g++<6;)fill(d,c=>c.cost<=3&&c.type!=="Spell");for(let g=0;d.length<8&&g++<24;)fill(d,c=>c.type!=="Spell"||stats(d).sp<3);return d.slice(0,8)},score=(d,p)=>{const s=stats(d);if(d.length!==8||new Set(d).size!==8)return-999;let q=100;if(!s.w)q-=80;if(s.w>2)q-=18*(s.w-2);if(!s.sp)q-=35;if(s.sp>3)q-=24*(s.sp-3);if(!s.ss)q-=12;if(s.aa<2)q-=28*(2-s.aa);if(!s.sl)q-=14;if(!s.tk&&!s.bd)q-=14;if(s.bd>2)q-=24*(s.bd-2);if(s.hv>2)q-=22*(s.hv-2);if(s.hw>1)q-=28*(s.hw-1);if(s.avg<p[2])q-=35*(p[2]-s.avg);if(s.avg>p[3])q-=35*(s.avg-p[3]);if(d.includes("Goblin Barrel")&&d.includes("Princess"))q+=8;if(d.includes("Graveyard")&&d.includes("Poison"))q+=10;if((d.includes("X-Bow")||d.includes("Mortar"))&&(d.includes("Tesla")||d.includes("Cannon")))q+=10;if(d.includes("Lava Hound")&&d.includes("Balloon"))q+=12;if(d.includes("Royal Giant")&&d.includes("Fisherman"))q+=9;recent.forEach((r,i)=>{const o=d.filter(n=>r.includes(n)).length;if(o>3)q-=(o-3)*(10-i)});return q};const chosen=pick(plans);let best={d:null,q:-1e9};for(let i=0;i<100;i++){const d=build(chosen),q=score(d,chosen)+Math.random()*8;if(q>best.q)best={d,q}}if(!best.d||best.d.length<8)best.d=shuffle(weightedDeck().cards).slice(0,8);randomBalancedDeck.recent=[best.d,...recent].slice(0,6);setActiveSetupDeck(shuffle(best.d));renderSetup();}
+    const RANDOM_DECK_EXCLUDED = set([
+      "Mirror", "Clone", "Spirit Empress Ground", "Spirit Empress Air",
+      "Goblin Brawler", "Cursed Hog", "Rascal Boy", "Rascal Girl", "Elixir Collector"
+    ]);
+    const smallSpellNames = ["The Log", "Zap", "Giant Snowball", "Barbarian Barrel", "Arrows", "Royal Delivery"];
+    const controlSpellNames = ["Fireball", "Poison", "Earthquake", "Void", "Vines", "Lightning", "Rocket", "Freeze", "Tornado", "Goblin Curse"];
+    const randomDeckArchetypes = [
+      {
+        name: "速转突袭",
+        wincons: ["Hog Rider", "Wall Breakers", "Battle Ram", "Ram Rider", "Royal Hogs", "Miner"],
+        secondaryWincons: ["Miner", "Wall Breakers"],
+        avgMin: 2.6,
+        avgMax: 3.7,
+        buildingChance: 0.7,
+        secondWinChance: 0.18,
+        spells: ["Fireball", "Earthquake", "Poison", "The Log", "Zap", "Giant Snowball"]
+      },
+      {
+        name: "诱饵消耗",
+        wincons: ["Goblin Barrel", "Skeleton Barrel", "Goblin Drill", "Miner"],
+        secondaryWincons: ["Skeleton Barrel", "Goblin Drill", "Miner", "Wall Breakers"],
+        avgMin: 2.8,
+        avgMax: 3.9,
+        buildingChance: 0.55,
+        secondWinChance: 0.35,
+        spells: ["Rocket", "Fireball", "The Log", "Arrows", "Zap", "Giant Snowball"]
+      },
+      {
+        name: "墓园控制",
+        wincons: ["Graveyard", "Miner"],
+        secondaryWincons: ["Miner"],
+        avgMin: 3.2,
+        avgMax: 4.3,
+        buildingChance: 0.55,
+        secondWinChance: 0.12,
+        spells: ["Poison", "Freeze", "Tornado", "Arrows", "Barbarian Barrel", "Giant Snowball"]
+      },
+      {
+        name: "攻城建筑",
+        wincons: ["X-Bow", "Mortar"],
+        secondaryWincons: ["Miner", "Skeleton Barrel", "Wall Breakers"],
+        avgMin: 2.8,
+        avgMax: 4.0,
+        buildingChance: 0.75,
+        secondWinChance: 0.08,
+        spells: ["Fireball", "Rocket", "Poison", "The Log", "Arrows", "Zap"]
+      },
+      {
+        name: "大型推进",
+        wincons: ["Giant", "Golem", "Goblin Giant", "Electro Giant", "Rune Giant"],
+        secondaryWincons: ["Balloon", "Miner"],
+        avgMin: 3.8,
+        avgMax: 5.1,
+        buildingChance: 0.22,
+        secondWinChance: 0.22,
+        spells: ["Lightning", "Fireball", "Poison", "Tornado", "Arrows", "Zap", "Rage"]
+      },
+      {
+        name: "空中推进",
+        wincons: ["Lava Hound", "Balloon"],
+        secondaryWincons: ["Balloon", "Miner"],
+        avgMin: 3.6,
+        avgMax: 4.9,
+        buildingChance: 0.18,
+        secondWinChance: 0.55,
+        spells: ["Fireball", "Lightning", "Arrows", "Zap", "Freeze", "Giant Snowball"]
+      },
+      {
+        name: "皇家巨人控制",
+        wincons: ["Royal Giant", "Goblin Giant", "Electro Giant"],
+        secondaryWincons: ["Miner"],
+        avgMin: 3.4,
+        avgMax: 4.6,
+        buildingChance: 0.28,
+        secondWinChance: 0.12,
+        spells: ["Lightning", "Fireball", "Earthquake", "The Log", "Barbarian Barrel", "Giant Snowball"]
+      },
+      {
+        name: "桥头反打",
+        wincons: ["Battle Ram", "Ram Rider", "Royal Hogs", "Wall Breakers"],
+        secondaryWincons: ["Miner", "Wall Breakers"],
+        avgMin: 3.2,
+        avgMax: 4.4,
+        buildingChance: 0.35,
+        secondWinChance: 0.28,
+        spells: ["Fireball", "Poison", "Arrows", "The Log", "Zap", "Royal Delivery"]
+      }
+    ];
+
+    function randomBalancedDeck() {
+      const deck = generateSmartRandomDeck();
+      setActiveSetupDeck(deck);
+      rememberRandomDeck(deck);
+      renderSetup();
+    }
+
+    function generateSmartRandomDeck() {
+      let best = null;
+      for (let i = 0; i < 110; i++) {
+        const archetype = weightedRandom(randomDeckArchetypes, item => item.name === "大型推进" || item.name === "空中推进" ? 0.78 : 1);
+        const candidate = buildRandomDeckCandidate(archetype);
+        const score = deckQualityScore(candidate, archetype) + Math.random() * 8 - repetitionPenalty(candidate);
+        if (!best || score > best.score) best = { deck: candidate, score };
+      }
+      if (best?.deck?.length === 8 && best.score > 40) return shuffle(best.deck);
+      return shuffle(buildMetaInspiredRandomDeck());
+    }
+
+    function buildRandomDeckCandidate(archetype) {
+      const deck = [];
+      const addName = name => {
+        const card = cardByName.get(name);
+        if (!card || !isRandomDeckCard(card) || deck.includes(name) || deck.length >= 8) return false;
+        deck.push(name);
+        return true;
+      };
+      const addFromNames = names => {
+        const pool = shuffle(names).filter(name => {
+          const card = cardByName.get(name);
+          return card && isRandomDeckCard(card) && !deck.includes(name);
+        });
+        return pool.some(addName);
+      };
+      const addFromPool = (pool, weightFn = () => 1) => {
+        const card = weightedRandom(pool.filter(card => !deck.includes(card.name) && isRandomDeckCard(card)), weightFn);
+        return card ? addName(card.name) : false;
+      };
+
+      addFromNames(archetype.wincons);
+      if (Math.random() < archetype.secondWinChance) addFromNames(archetype.secondaryWincons || []);
+
+      if (deck.includes("Lava Hound") && Math.random() < 0.75) addName("Balloon");
+      if (deck.includes("Goblin Barrel")) {
+        if (Math.random() < 0.7) addName("Princess");
+        if (Math.random() < 0.65) addName("Goblin Gang");
+      }
+      if (deck.includes("Royal Giant")) {
+        if (Math.random() < 0.55) addName("Fisherman");
+        if (Math.random() < 0.45) addName("Hunter");
+      }
+      if (deck.includes("Graveyard")) {
+        if (Math.random() < 0.6) addName("Poison");
+        if (Math.random() < 0.35) addName("Baby Dragon");
+      }
+      if (deck.includes("X-Bow")) {
+        if (Math.random() < 0.75) addName("Tesla");
+      } else if (deck.includes("Mortar") && Math.random() < 0.45) {
+        addName("Miner");
+      }
+
+      addFromNames(shuffle(archetype.spells));
+      if (!deckStats(deck).smallSpells) addFromPool(randomPool(card => smallSpellNames.includes(card.name)), card => spellWeight(card, archetype, deck));
+      if (deckStats(deck).spells < 2 && Math.random() < 0.82) addFromPool(randomPool(card => controlSpellNames.includes(card.name)), card => spellWeight(card, archetype, deck));
+
+      if (Math.random() < archetype.buildingChance && deckStats(deck).buildings < 2) {
+        addFromPool(randomPool(card => card.type === "Building" && !card.isWinCondition), card => defensiveBuildingWeight(card, deck));
+      }
+      while (deckStats(deck).antiAir < 2 && deck.length < 8) {
+        if (!addFromPool(randomPool(card => card.type !== "Spell" && card.canHitAir && card.attacks && isSupportRandomCard(card, deck)), card => supportWeight(card, archetype, deck) + 4)) break;
+      }
+      if (!deckStats(deck).splash) {
+        addFromPool(randomPool(card => card.type !== "Spell" && card.isSplash && isSupportRandomCard(card, deck)), card => supportWeight(card, archetype, deck) + 3);
+      }
+      if (!deckStats(deck).tankKillers) {
+        addFromPool(randomPool(card => card.type !== "Spell" && (highDpsNames.has(card.name) || infernoBeamNames.has(card.name)) && isSupportRandomCard(card, deck)), card => supportWeight(card, archetype, deck) + 2);
+      }
+      while (deckStats(deck).cheap < 2 && deck.length < 8) {
+        if (!addFromPool(randomPool(card => card.cost <= 3 && card.type !== "Spell" && isSupportRandomCard(card, deck)), card => supportWeight(card, archetype, deck) + 2)) break;
+      }
+      while (deck.length < 8) {
+        const fillStats = deckStats(deck);
+        const supportPool = randomPool(card => card.type !== "Spell" && (!card.isWinCondition || fillStats.wincons < 1));
+        if (!addFromPool(supportPool, card => supportWeight(card, archetype, deck))) {
+          addFromPool(randomPool(card => true), card => supportWeight(card, archetype, deck));
+        }
+      }
+      return deck.slice(0, 8);
+    }
+
+    function buildMetaInspiredRandomDeck() {
+      const base = shuffle(weightedDeck().cards).slice(0, 5);
+      const deck = [...base];
+      while (deck.length < 8) {
+        const stats = deckStats(deck);
+        let pool;
+        if (!stats.smallSpells) pool = randomPool(card => smallSpellNames.includes(card.name));
+        else if (stats.antiAir < 2) pool = randomPool(card => card.type !== "Spell" && card.canHitAir && card.attacks);
+        else if (!stats.splash) pool = randomPool(card => card.type !== "Spell" && card.isSplash);
+        else pool = randomPool(card => card.type !== "Spell" || card.type === "Building");
+        const card = weightedRandom(pool.filter(item => !deck.includes(item.name)), item => supportWeight(item, randomDeckArchetypes[0], deck));
+        if (!card) break;
+        deck.push(card.name);
+      }
+      return deck.filter(name => cardByName.has(name)).slice(0, 8);
+    }
+
+    function isRandomDeckCard(card) {
+      if (!card || RANDOM_DECK_EXCLUDED.has(card.name)) return false;
+      if (card.type === "Spell" && ["Mirror", "Clone"].includes(card.name)) return false;
+      return true;
+    }
+
+    function randomPool(predicate) {
+      return CARDS.filter(card => isRandomDeckCard(card) && predicate(card));
+    }
+
+    function isSupportRandomCard(card, deck) {
+      return !card.isWinCondition || deckStats(deck).wincons < 1;
+    }
+
+    function weightedRandom(items, weightFn = () => 1) {
+      const weighted = items
+        .map(item => ({ item, weight: Math.max(0.05, Number(weightFn(item)) || 0.05) }))
+        .filter(entry => entry.weight > 0);
+      const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);
+      let roll = Math.random() * total;
+      for (const entry of weighted) {
+        roll -= entry.weight;
+        if (roll <= 0) return entry.item;
+      }
+      return weighted[weighted.length - 1]?.item || null;
+    }
+
+    function deckStats(names) {
+      const cards = names.map(name => cardByName.get(name)).filter(Boolean);
+      const avg = cards.reduce((sum, card) => sum + card.cost, 0) / Math.max(1, cards.length);
+      return {
+        cards,
+        avg,
+        wincons: cards.filter(card => card.isWinCondition).length,
+        spells: cards.filter(card => card.type === "Spell").length,
+        smallSpells: cards.filter(card => smallSpellNames.includes(card.name)).length,
+        controlSpells: cards.filter(card => controlSpellNames.includes(card.name)).length,
+        buildings: cards.filter(card => card.type === "Building").length,
+        antiAir: cards.filter(card => card.type !== "Spell" && card.canHitAir && card.attacks).length,
+        splash: cards.filter(card => card.type !== "Spell" && card.isSplash).length,
+        swarms: cards.filter(card => card.isSwarm || groupDeployProfiles[card.name]).length,
+        heavy: cards.filter(card => card.cost >= 6).length,
+        cheap: cards.filter(card => card.cost <= 3).length,
+        buildingTargeters: cards.filter(card => card.isBuildingTargeter).length,
+        tankKillers: cards.filter(card => highDpsNames.has(card.name) || infernoBeamNames.has(card.name)).length,
+        airUnits: cards.filter(card => card.isAir).length,
+        groundTroops: cards.filter(card => card.type === "Troop" && !card.isAir).length
+      };
+    }
+
+    function deckQualityScore(names, archetype) {
+      if (new Set(names).size !== 8 || names.length !== 8) return -999;
+      const stats = deckStats(names);
+      let score = 100;
+      if (!stats.wincons) score -= 80;
+      if (stats.wincons > 2) score -= (stats.wincons - 2) * 18;
+      if (!stats.spells) score -= 35;
+      if (stats.spells > 3) score -= (stats.spells - 3) * 24;
+      if (!stats.smallSpells) score -= 14;
+      if (!stats.controlSpells) score -= 9;
+      if (stats.antiAir < 2) score -= (2 - stats.antiAir) * 28;
+      if (!stats.splash) score -= 14;
+      if (!stats.tankKillers) score -= 10;
+      if (stats.buildings > 2) score -= (stats.buildings - 2) * 26;
+      if (stats.swarms > 3) score -= (stats.swarms - 3) * 14;
+      if (stats.heavy > 2) score -= (stats.heavy - 2) * 24;
+      if (stats.buildingTargeters > 2) score -= (stats.buildingTargeters - 2) * 16;
+      const heavyWincons = stats.cards.filter(card => card.isWinCondition && card.cost >= 5).length;
+      if (heavyWincons > 1) score -= (heavyWincons - 1) * 24;
+      if (stats.groundTroops < 2) score -= 12;
+      if (stats.avg < archetype.avgMin) score -= (archetype.avgMin - stats.avg) * 35;
+      if (stats.avg > archetype.avgMax) score -= (stats.avg - archetype.avgMax) * 35;
+      score += synergyScore(names, archetype);
+      score += Math.min(10, stats.cheap * 2);
+      return score;
+    }
+
+    function synergyScore(names, archetype) {
+      const deck = new Set(names);
+      let score = 0;
+      if (["Hog Rider", "Royal Hogs", "Battle Ram", "Ram Rider", "Wall Breakers"].some(name => deck.has(name))) {
+        if (deck.has("Earthquake")) score += 12;
+        if (["The Log", "Zap", "Giant Snowball"].some(name => deck.has(name))) score += 5;
+      }
+      if (deck.has("Goblin Barrel")) {
+        if (deck.has("Princess")) score += 9;
+        if (deck.has("Goblin Gang")) score += 8;
+        if (deck.has("Rocket")) score += 6;
+      }
+      if (deck.has("Graveyard")) {
+        if (deck.has("Poison")) score += 13;
+        if (deck.has("Freeze") || deck.has("Tornado")) score += 8;
+        if (["Baby Dragon", "Bowler", "Valkyrie", "Knight"].some(name => deck.has(name))) score += 8;
+      }
+      if (deck.has("X-Bow") || deck.has("Mortar")) {
+        if (deck.has("Tesla") || deck.has("Cannon")) score += 10;
+        if (deck.has("Fireball") || deck.has("Rocket")) score += 7;
+      }
+      if (["Golem", "Giant", "Goblin Giant", "Electro Giant", "Rune Giant"].some(name => deck.has(name))) {
+        if (["Night Witch", "Witch", "Baby Dragon", "Electro Dragon", "Phoenix"].some(name => deck.has(name))) score += 10;
+        if (deck.has("Lightning") || deck.has("Tornado")) score += 7;
+      }
+      if (deck.has("Lava Hound")) {
+        if (deck.has("Balloon")) score += 12;
+        if (["Minions", "Mega Minion", "Skeleton Dragons", "Flying Machine", "Phoenix"].some(name => deck.has(name))) score += 8;
+      }
+      if (deck.has("Royal Giant")) {
+        if (deck.has("Fisherman")) score += 10;
+        if (deck.has("Hunter") || deck.has("Mother Witch")) score += 8;
+        if (deck.has("Lightning")) score += 8;
+      }
+      if (archetype.name === "诱饵消耗" && deckStats(names).swarms >= 2) score += 5;
+      return score;
+    }
+
+    function supportWeight(card, archetype, deck) {
+      const stats = deckStats(deck);
+      let weight = 1;
+      if (card.cost <= 3) weight += archetype.avgMax <= 3.9 ? 2.1 : 0.8;
+      if (card.type !== "Spell" && card.canHitAir && card.attacks && stats.antiAir < 2) weight += 4;
+      if (card.isSplash && !stats.splash) weight += 3.2;
+      if (highDpsNames.has(card.name) && !stats.tankKillers) weight += 2.8;
+      if (card.type === "Building" && stats.buildings >= 1) weight -= 1.2;
+      if (card.isWinCondition && stats.wincons >= 1) weight -= 1.6;
+      if (card.cost >= 6 && stats.heavy >= 1) weight -= 2;
+      if (card.isSwarm && stats.swarms >= 2) weight -= 1.4;
+      if (archetype.name === "空中推进" && card.isAir) weight += 2;
+      if (archetype.name === "大型推进" && (card.isSplash || card.canHitAir)) weight += 1.4;
+      return Math.max(0.1, weight);
+    }
+
+    function spellWeight(card, archetype, deck) {
+      let weight = 1.2;
+      const stats = deckStats(deck);
+      if (smallSpellNames.includes(card.name) && !stats.smallSpells) weight += 4;
+      if (controlSpellNames.includes(card.name) && !stats.controlSpells) weight += 2.5;
+      if (archetype.spells.includes(card.name)) weight += 2.2;
+      if (deck.includes("Graveyard") && ["Poison", "Freeze", "Tornado"].includes(card.name)) weight += 3;
+      if (deck.includes("Goblin Barrel") && ["Rocket", "The Log", "Arrows"].includes(card.name)) weight += 2.4;
+      if (["Hog Rider", "Royal Hogs"].some(name => deck.includes(name)) && ["Earthquake", "Fireball"].includes(card.name)) weight += 2.5;
+      if (stats.spells >= 2) weight -= 1.8;
+      return Math.max(0.1, weight);
+    }
+
+    function defensiveBuildingWeight(card, deck) {
+      const stats = deckStats(deck);
+      let weight = 1;
+      if (["Cannon", "Tesla", "Bomb Tower", "Tombstone", "Goblin Cage", "Inferno Tower"].includes(card.name)) weight += 3;
+      if (card.canHitAir) weight += stats.antiAir < 2 ? 2 : 0.6;
+      if (infernoBeamNames.has(card.name) && !stats.tankKillers) weight += 2.5;
+      if (card.spawnEvery > 0) weight += 0.9;
+      if (card.name === "Elixir Collector") weight -= 2.5;
+      return weight;
+    }
+
+    function secondaryWinWeight(card, archetype, deck) {
+      let weight = 0.6;
+      if (card.cost <= 4) weight += 1.4;
+      if (archetype.name === "空中推进" && ["Balloon", "Miner"].includes(card.name)) weight += 2.8;
+      if (archetype.name === "诱饵消耗" && ["Goblin Barrel", "Skeleton Barrel", "Miner", "Goblin Drill"].includes(card.name)) weight += 2;
+      if (archetype.name === "桥头反打" && ["Bandit", "Battle Ram", "Ram Rider", "Royal Hogs"].includes(card.name)) weight += 2;
+      if (deckStats(deck).cards.some(item => item.isWinCondition && item.cost >= 5) && card.cost >= 5) weight -= 3.5;
+      if (deckStats(deck).avg > archetype.avgMax - 0.2 && card.cost >= 5) weight -= 2.5;
+      return Math.max(0.05, weight);
+    }
+
+    function rememberRandomDeck(deck) {
+      recentRandomDecks.unshift([...deck]);
+      recentRandomDecks = recentRandomDecks.slice(0, 8);
+    }
+
+    function repetitionPenalty(deck) {
+      return recentRandomDecks.reduce((sum, oldDeck, index) => {
+        const overlap = deck.filter(name => oldDeck.includes(name)).length;
+        return sum + Math.max(0, overlap - 3) * (10 - index);
+      }, 0);
+    }
+
     function chooseComputerDeck() {
       if (gameMode === "ai" && aiDifficulty === "pharaoh") return choosePharaohMetaDeck(selectedDeck);
       return weightedDeck();
@@ -1990,6 +2445,7 @@ Vines|藤蔓
           </button>
         `;
       }).join("");
+      el(`${side}AbilityPanel`).innerHTML = renderAbilityButtons(side);
       el(`${side}PlacementGrid`).innerHTML = state.mode === "demo"
         ? ""
         : PLACEMENTS.map(place => {
@@ -2014,6 +2470,316 @@ Vines|藤蔓
       el("demoFasterBtn").disabled = state.mode !== "demo" || state.demoSpeedIndex >= DEMO_SPEEDS.length - 1;
     }
 
+    function renderAbilityButtons(side) {
+      const units = activeChampionUnits(side);
+      if (!units.length) return "";
+      return units.map(unit => {
+        const ability = CHAMPION_ABILITIES[unit.name];
+        const status = championAbilityStatus(unit, side);
+        const humanSide = state.mode === "duel" || ((state.mode === "ai" || state.mode === "touchdown") && side === "player");
+        const disabled = !humanSide || !status.ready;
+        return `
+          <button class="ability-button" data-ability-side="${side}" data-ability-id="${unit.id}" ${disabled ? "disabled" : ""}>
+            <span class="cost">${ability.cost}</span>
+            <span>
+              <strong>${cardName(unit.name)}：${ability.label}</strong>
+              <small>${status.text} · ${ability.summary}</small>
+            </span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function activeChampionUnits(side) {
+      const latestByName = new Map();
+      state.units
+        .filter(unit => unit.side === side && unit.hp > 0 && CHAMPION_ABILITIES[unit.name])
+        .forEach(unit => {
+          const current = latestByName.get(unit.name);
+          if (!current || unit.id > current.id) latestByName.set(unit.name, unit);
+        });
+      return [...latestByName.values()].sort((a, b) => b.id - a.id);
+    }
+
+    function championAbilityStatus(unit, side) {
+      const ability = CHAMPION_ABILITIES[unit.name];
+      if (!ability) return { ready: false, text: "没有技能" };
+      const cooldown = unit.abilityCooldown || 0;
+      const used = unit.abilityUses || 0;
+      const maxUses = ability.uses || Infinity;
+      if (used >= maxUses) return { ready: false, text: "本次部署技能已用尽" };
+      if (cooldown > 0) return { ready: false, text: `冷却 ${cooldown} 回合` };
+      if (state[elixirKey(side)] < ability.cost) return { ready: false, text: `需要 ${ability.cost} 圣水` };
+      if (unit.frozen > 0 || unit.rooted > 0) return { ready: false, text: "被控制中" };
+      if (unit.name === "Skeleton King") return { ready: true, text: `可释放 · 灵魂 ${unit.souls || 0}/10` };
+      return { ready: true, text: "可释放" };
+    }
+
+    function activateChampionAbilityById(side, id) {
+      if (!state || state.gameOver) return;
+      const humanSide = state.mode === "duel" || ((state.mode === "ai" || state.mode === "touchdown") && side === "player");
+      if (!humanSide) return;
+      const unit = state.units.find(item => item.id === Number(id) && item.side === side && item.hp > 0);
+      if (!unit) return;
+      if (useChampionAbility(unit, side, "human")) {
+        cleanupUnits();
+        checkAllTowers();
+        state.mapMessage = `${sideName(side)}发动了 ${cardName(unit.name)} 的「${CHAMPION_ABILITIES[unit.name].label}」。`;
+        renderBattle();
+      }
+    }
+
+    function useChampionAbility(unit, side = unit.side, source = "ai") {
+      const ability = CHAMPION_ABILITIES[unit.name];
+      if (!ability || unit.hp <= 0) return false;
+      const status = championAbilityStatus(unit, side);
+      if (!status.ready) return false;
+      const key = elixirKey(side);
+      state[key] -= ability.cost;
+      unit.abilityUses = (unit.abilityUses || 0) + 1;
+      unit.abilityCooldown = cooldownTurns(ability.cooldown);
+      applyChampionAbility(unit, ability);
+      log(`${sideName(side)}消耗 ${ability.cost} 圣水，发动 ${cardName(unit.name)} 的「${ability.label}」。`);
+      return true;
+    }
+
+    function computerControlsSide(side) {
+      if (!state || state.gameOver) return false;
+      if (state.mode === "demo") return true;
+      return (state.mode === "ai" || state.mode === "touchdown") && side === "enemy";
+    }
+
+    function maybeUseChampionAbility(side, timing = "turn") {
+      if (!computerControlsSide(side)) return false;
+      const difficulty = aiDifficultyFor(side);
+      if (difficulty === "easy" && Math.random() < 0.48) return false;
+      const threshold = difficulty === "pharaoh" ? 26 : difficulty === "hard" ? 38 : difficulty === "easy" ? 68 : 42;
+      const choices = activeChampionUnits(side)
+        .map(unit => ({
+          unit,
+          status: championAbilityStatus(unit, side),
+          score: championAbilityScore(unit, side, timing, difficulty)
+        }))
+        .filter(item => item.status.ready)
+        .sort((a, b) => b.score - a.score);
+      const pick = choices[0];
+      if (!pick || pick.score < threshold) return false;
+      return useChampionAbility(pick.unit, side, "ai");
+    }
+
+    function championAbilityScore(unit, side, timing, difficulty) {
+      const enemyUnits = nearbyEnemyUnits(unit, 6.2);
+      const closeEnemies = nearbyEnemyUnits(unit, 3.1);
+      const groundClose = closeEnemies.filter(item => !item.isAir);
+      const towers = nearbyEnemyTowers(unit, 5.6);
+      const threatened = closeEnemies.reduce((sum, item) => sum + item.damage + item.hp * 0.08, 0);
+      const offensive = side === "player" ? unit.pos <= 9.5 : unit.pos >= 10.5;
+      const lowHp = unit.hp < unit.maxHp * 0.42;
+      let score = difficulty === "pharaoh" ? 10 : 0;
+      if (timing === "combat") score += 12;
+      if (unit.name === "Archer Queen") {
+        score += closeEnemies.length * 32 + towers.length * 38 + (offensive ? 16 : 0) + (lowHp && closeEnemies.length ? 20 : 0);
+        if (!closeEnemies.length && !towers.length) score -= 18;
+      } else if (unit.name === "Golden Knight") {
+        const chain = goldenKnightPotential(unit);
+        score += chain * 24 + (chain >= 2 ? 22 : 0) + towers.length * 18;
+      } else if (unit.name === "Skeleton King") {
+        const souls = unit.souls || 0;
+        score += souls * 6 + closeEnemies.length * 9 + (souls >= 5 ? 24 : 0) + (offensive ? 12 : 0);
+        if (souls < 2 && !lowHp) score -= 20;
+      } else if (unit.name === "Mighty Miner") {
+        score += groundClose.length * 18 + towers.length * 26 + (offensive ? 18 : 0) + (lowHp ? 12 : 0);
+        if (!groundClose.length && !towers.length && !offensive) score -= 22;
+      } else if (unit.name === "Monk") {
+        score += closeEnemies.length * 18 + Math.min(36, threatened * 0.06) + (lowHp ? 20 : 0) + towers.length * 10;
+      } else if (unit.name === "Little Prince") {
+        score += groundClose.length * 24 + (lowHp && groundClose.length ? 18 : 0) + (offensive ? 10 : 0);
+        if (!groundClose.length) score -= 18;
+      } else if (unit.name === "Goblinstein") {
+        const linkTargets = nearbyEnemyUnits(unit, 2.6).length + nearbyEnemyTowers(unit, 2.4).length;
+        score += linkTargets * 30 + (linkTargets >= 2 ? 20 : 0);
+      } else if (unit.name === "Boss Bandit") {
+        score += closeEnemies.length * 16 + towers.length * 22 + (lowHp ? 20 : 0) + (unit.abilityUses ? -8 : 6);
+      }
+      return score;
+    }
+
+    function nearbyEnemyUnits(unit, radius) {
+      const enemy = unit.side === "player" ? "enemy" : "player";
+      return state.units.filter(target =>
+        target.side === enemy &&
+        target.hp > 0 &&
+        areaDistance(unit.lane, unit.pos, target.lane, target.pos) <= radius
+      );
+    }
+
+    function nearbyEnemyTowers(unit, radius) {
+      if (state.mode === "touchdown") return [];
+      const enemy = unit.side === "player" ? "enemy" : "player";
+      return Object.values(state.towers[enemy]).filter(towerObj =>
+        towerObj.hp > 0 &&
+        areaDistance(unit.lane, unit.pos, towerObj.lane, towerObj.pos) <= radius
+      );
+    }
+
+    function goldenKnightPotential(unit) {
+      return Math.min(5, nearbyEnemyUnits(unit, 5.8).filter(target => !target.isAir).length + nearbyEnemyTowers(unit, 5.8).length);
+    }
+
+    function cooldownTurns(seconds) {
+      return Math.max(1, Math.ceil(seconds / phaseInfo(state.time).seconds));
+    }
+
+    function durationTurns(seconds) {
+      return Math.max(1, Math.ceil(seconds / phaseInfo(state.time).seconds));
+    }
+
+    function applyChampionAbility(unit, ability) {
+      if (unit.name === "Archer Queen") {
+        const turns = durationTurns(ability.duration);
+        unit.cloaked = Math.max(unit.cloaked, turns);
+        unit.queenBoost = Math.max(unit.queenBoost, turns);
+        unit.slowed = Math.max(unit.slowed, turns);
+        unit.targetId = null;
+        log(`${sideName(unit.side)}的 ${cardName(unit.name)} 披上隐身披风，短时间内不被索敌且输出提升。`);
+        return;
+      }
+      if (unit.name === "Golden Knight") {
+        const hits = goldenKnightDash(unit);
+        log(`${sideName(unit.side)}的 ${cardName(unit.name)} 连续冲刺，命中 ${hits} 个目标。`);
+        return;
+      }
+      if (unit.name === "Skeleton King") {
+        const souls = Math.min(10, unit.souls || 0);
+        const amount = 6 + souls;
+        unit.souls = 0;
+        summonSkeletonKingSouls(unit, amount);
+        log(`${sideName(unit.side)}的 ${cardName(unit.name)} 释放 ${souls} 个灵魂，召唤 ${amount} 个骷髅。`);
+        return;
+      }
+      if (unit.name === "Mighty Miner") {
+        const oldLane = unit.lane;
+        const oldPos = unit.pos;
+        unit.lane = oppositeLane(unit.lane);
+        unit.targetId = null;
+        unit.infernoTargetId = null;
+        unit.infernoCharge = 0;
+        normalizeRiverCell(unit);
+        areaDamage(unit.side, oldLane, oldPos, 280, { radius: 2.2, knock: 0.65 });
+        log(`${sideName(unit.side)}的 ${cardName(unit.name)} 钻到对侧路线，并在原地留下爆炸。`);
+        return;
+      }
+      if (unit.name === "Monk") {
+        unit.monkProtection = Math.max(unit.monkProtection, durationTurns(ability.duration));
+        unit.targetId = null;
+        log(`${sideName(unit.side)}的 ${cardName(unit.name)} 进入冥想护体，承受伤害大幅降低。`);
+        return;
+      }
+      if (unit.name === "Little Prince") {
+        royalRescue(unit);
+        return;
+      }
+      if (unit.name === "Goblinstein") {
+        unit.goblinsteinLink = Math.max(unit.goblinsteinLink, durationTurns(ability.duration));
+        zapGoblinsteinLink(unit);
+        log(`${sideName(unit.side)}的 ${cardName(unit.name)} 拉起闪电连接，持续电击附近敌人。`);
+        return;
+      }
+      if (unit.name === "Boss Bandit") {
+        getawayGrenade(unit);
+      }
+    }
+
+    function goldenKnightDash(unit) {
+      const enemy = unit.side === "player" ? "enemy" : "player";
+      let hits = 0;
+      const used = new Set();
+      for (let i = 0; i < 5; i++) {
+        const candidates = [
+          ...state.units.filter(target => target.side === enemy && target.hp > 0 && !target.isAir && !used.has(`u${target.id}`))
+            .map(target => ({ kind: "unit", target, lane: target.lane, pos: target.pos, hp: target.hp })),
+          ...(state.mode === "touchdown" ? [] : Object.values(state.towers[enemy])
+            .filter(towerObj => towerObj.hp > 0 && !used.has(`t${towerObj.name}`))
+            .map(towerObj => ({ kind: "tower", target: towerObj, lane: towerObj.lane, pos: towerObj.pos, hp: towerObj.hp })))
+        ].filter(item => areaDistance(unit.lane, unit.pos, item.lane, item.pos) <= 5.8)
+          .sort((a, b) => areaDistance(unit.lane, unit.pos, a.lane, a.pos) - areaDistance(unit.lane, unit.pos, b.lane, b.pos));
+        const pick = candidates[0];
+        if (!pick) break;
+        hits++;
+        unit.lane = pick.lane;
+        unit.pos = clampPos(pick.pos + (unit.side === "player" ? 0.55 : -0.55));
+        unit.jumping = Math.max(unit.jumping, 1);
+        if (pick.kind === "unit") {
+          used.add(`u${pick.target.id}`);
+          damageUnit(pick.target, 245, { attacker: unit });
+        } else {
+          used.add(`t${pick.target.name}`);
+          damageTower(pick.target, enemy, 170, `${cardName(unit.name)} 技能冲刺`);
+          break;
+        }
+      }
+      if (!hits) moveUnitTo(unit, unit.pos + (unit.side === "player" ? -2.2 : 2.2));
+      return hits;
+    }
+
+    function summonSkeletonKingSouls(unit, amount) {
+      const nearby = lanesAround(unit.lane);
+      for (let i = 0; i < amount; i++) {
+        const lane = nearby[i % nearby.length] || unit.lane;
+        const offset = ((i % 5) - 2) * 0.22;
+        spawnUnit(unit.side, "Skeletons", lane, clampPos(unit.pos + offset), 0.45, {
+          hp: 1,
+          damage: 42,
+          count: 1,
+          abilitySummon: true
+        });
+      }
+    }
+
+    function oppositeLane(lane) {
+      const pairs = { L: "R", LL: "RR", ML: "MR", MR: "ML", RR: "LL", R: "L", M: "M" };
+      return pairs[lane] || lane;
+    }
+
+    function royalRescue(unit) {
+      const dir = unit.side === "player" ? -1 : 1;
+      const rescuePos = clampPos(unit.pos + dir * 0.9);
+      const guardian = spawnUnit(unit.side, "Guardienne", unit.lane, rescuePos, 1, { jitter: false, abilitySummon: true });
+      guardian.targetId = null;
+      areaDamage(unit.side, unit.lane, rescuePos, 210, { radius: 2.4, knock: 1.2, groundOnly: true });
+      log(`${sideName(unit.side)}的 ${cardName("Guardienne")} 冲到 ${cardName(unit.name)} 前方，击退地面敌军。`);
+    }
+
+    function zapGoblinsteinLink(unit) {
+      const enemy = unit.side === "player" ? "enemy" : "player";
+      const targets = state.units
+        .filter(target => target.side === enemy && target.hp > 0 && areaDistance(unit.lane, unit.pos, target.lane, target.pos) <= 2.5)
+        .sort((a, b) => areaDistance(unit.lane, unit.pos, a.lane, a.pos) - areaDistance(unit.lane, unit.pos, b.lane, b.pos));
+      targets.forEach(target => {
+        damageUnit(target, 115, { attacker: unit });
+        state.effects.push({ kind: "beam", fromLane: unit.lane, fromPos: unit.pos, toLane: target.lane, toPos: target.pos });
+      });
+      if (state.mode !== "touchdown") {
+        Object.values(state.towers[enemy]).forEach(towerObj => {
+          if (towerObj.hp > 0 && areaDistance(unit.lane, unit.pos, towerObj.lane, towerObj.pos) <= 2.3) {
+            damageTower(towerObj, enemy, 28, `${cardName(unit.name)} 闪电连接`);
+            state.effects.push({ kind: "beam", fromLane: unit.lane, fromPos: unit.pos, toLane: towerObj.lane, toPos: towerObj.pos });
+          }
+        });
+      }
+    }
+
+    function getawayGrenade(unit) {
+      areaDamage(unit.side, unit.lane, unit.pos, 165, { radius: 1.9, knock: 0.85 });
+      const backDir = unit.side === "player" ? 1 : -1;
+      unit.pos = clampPos(unit.pos + backDir * 2.0);
+      unit.banditStealth = Math.max(unit.banditStealth, durationTurns(CHAMPION_ABILITIES["Boss Bandit"].duration));
+      unit.cloaked = Math.max(unit.cloaked, unit.banditStealth);
+      unit.targetId = null;
+      normalizeRiverCell(unit);
+      log(`${sideName(unit.side)}的 ${cardName(unit.name)} 丢出烟弹后撤，短暂隐身。`);
+    }
+
     function renderMap() {
       const rows = [];
       const colWidth = state.mode === "duel" || state.mode === "touchdown" ? 10 : 12;
@@ -2024,24 +2790,24 @@ Vines|藤蔓
         const marker = touchdownRowMarker(row) || (row === 10 ? "河" : row === 0 ? "敌" : row === 20 ? "我" : String(row).padStart(2, "0"));
         const body = LANES.map(lane => fitText(cell(row, lane.id), colWidth)).join("│");
         rows.push(`${marker}│${body}│`);
-                if (state.mode !== "touchdown" && row === 10) {
-                            const riverLabels = LANES.map(lane => {
-                                          if (lane.id === "L") return "\u5de6\u6865";
-                                          if (lane.id === "R") return "\u53f3\u6865";
-                                          return "\u6cb3\u9053";
-                            });
-                            rows.push(`  \u251c${riverLabels.map(label => fitText(label, colWidth, "\u2500")).join("\u253c")}\u2524`);
-                }
+        if (state.mode !== "touchdown" && row === 10) {
+          const riverLabels = LANES.map(lane => {
+            if (lane.id === "L") return "左桥";
+            if (lane.id === "R") return "右桥";
+            return "河道";
+          });
+          rows.push(`  ├${riverLabels.map(label => fitText(label, colWidth, "─")).join("┼")}┤`);
+        }
       }
       rows.push(`  └${LANES.map(() => border).join("┴")}┘`);
       rows.push("");
       rows.push(state.mode === "touchdown"
         ? "底=达阵底线 禁=中央禁区。没有塔、没有河、没有桥；双方只能在己方可下牌区部署。"
         : state.mode === "demo"
-        ? "甲=电脑A 乙=电脑B 塔=防御塔 筑=建筑 空=空军。中左走左桥，中右走右桥。"
+        ? "甲=电脑A 乙=电脑B 塔=防御塔 筑=建筑 空=空军。偏左格走左桥，偏右格走右桥。"
         : state.mode === "duel"
-          ? "甲=玩家A 乙=玩家B 塔=防御塔 筑=建筑 空=空军。中左走左桥，中右走右桥。"
-          : `我=${sideName("player")} 敌=${sideName("enemy")} 塔=防御塔 筑=建筑 空=空军。普通地面单位只能走桥，空军和跳河单位可以越河。`);
+          ? "甲=玩家A 乙=玩家B 塔=防御塔 筑=建筑 空=空军。偏左格走左桥，偏右格走右桥。"
+          : `我=${sideName("player")} 敌=${sideName("enemy")} 塔=防御塔 筑=建筑 空=空军。偏左格走左桥，偏右格走右桥；普通地面单位只能走桥。`);
       el("arenaMap").textContent = rows.join("\n");
       renderBoard();
       renderMapHint();
@@ -2153,6 +2919,21 @@ Vines|藤蔓
       return itemLane === cellLane || (itemLane === "M" && (cellLane === "ML" || cellLane === "MR"));
     }
 
+    function unitDisplayLane(unit) {
+      return blockedByRiverCell(unit, unit.lane, unit.pos) ? riverExitLane(unit) : unit.lane;
+    }
+
+    function unitStateMark(unit) {
+      if (unit.type === "Building") return "筑";
+      if (unit.cloaked > 0 || unit.banditStealth > 0) return "隐";
+      if (unit.monkProtection > 0) return "护";
+      if (unit.goblinsteinLink > 0) return "链";
+      if (unit.isAir) return "空";
+      if (unit.jumping > 0) return "跃";
+      if (unit.shield > 0) return "盾";
+      return "";
+    }
+
     function cell(row, lane) {
       return cellItems(row, lane).map(item => item.text).slice(0, 2).join(" ");
     }
@@ -2166,8 +2947,9 @@ Vines|藤蔓
         }
       });
       state.units.forEach(unit => {
-        if (Math.round(unit.pos) === row && laneOccupiesCell(unit.lane, lane) && unit.hp > 0) {
-          const kind = unit.type === "Building" ? "筑" : unit.isAir ? "空" : unit.jumping > 0 ? "跃" : unit.shield > 0 ? "盾" : "";
+        const displayLane = unitDisplayLane(unit);
+        if (Math.round(unit.pos) === row && laneOccupiesCell(displayLane, lane) && unit.hp > 0) {
+          const kind = unitStateMark(unit);
           parts.push({ className: unit.side, text: `${mapSide(unit.side)}${kind}:${cardName(unit.name)}` });
         }
       });
@@ -2501,7 +3283,7 @@ Vines|藤蔓
     }
 
     function createUnit(side, card, lane, pos, overrides = {}) {
-      return {
+      const unit = {
         id: state.nextId++,
         side,
         name: card.name,
@@ -2529,6 +3311,15 @@ Vines|藤蔓
         rooted: 0,
         jumping: 0,
         slowed: 0,
+        cloaked: 0,
+        queenBoost: 0,
+        monkProtection: 0,
+        goblinsteinLink: 0,
+        banditStealth: 0,
+        abilityCooldown: 0,
+        abilityUses: 0,
+        souls: 0,
+        abilitySummon: Boolean(overrides.abilitySummon),
         cursed: 0,
         cursedBy: null,
         cursedHogBy: null,
@@ -2548,6 +3339,7 @@ Vines|藤蔓
         infernoTargetId: null,
         infernoCharge: 0
       };
+      return normalizeRiverCell(unit);
     }
 
     function castSpell(side, card, place) {
@@ -2757,6 +3549,7 @@ Vines|藤蔓
         if (!laneInWidth(lane, unit.lane, spec.width)) return;
         damageUnit(unit, damage);
         unit.pos = clampPos(unit.pos + dir * (spec.knock || 0));
+        normalizeRiverCell(unit);
       });
       damageTowersInPath(enemy, lane, minPos, maxPos, spec.width, Math.round(damage * spec.towerRatio), cause);
       return endPos;
@@ -2783,6 +3576,7 @@ Vines|藤蔓
         const step = Math.max(-2.2, Math.min(2.2, delta * 0.65));
         unit.pos = clampPos(unit.pos + step);
         if (lane !== unit.lane && Math.abs(delta) <= radius) unit.lane = lane;
+        normalizeRiverCell(unit);
       });
       return targets.length;
     }
@@ -2829,25 +3623,24 @@ Vines|藤蔓
       if (lane === "M") return laneCenterIndex();
       const index = LANES.findIndex(item => item.id === lane);
       return index >= 0 ? index : laneCenterIndex();
-      
-      
     }
 
-        function laneCenterIndex() {
-                return (LANES.length - 1) / 2;
-        }
-    
-        function laneWidthScale() {
-                return 3 / Math.max(1, LANES.length - 1);
-        }
-    
-        function laneDistance(aLane, bLane) {
-                return Math.abs(laneIndex(aLane) - laneIndex(bLane)) * laneWidthScale();
-        }
-    
+    function laneCenterIndex() {
+      return (LANES.length - 1) / 2;
+    }
+
+    function laneWidthScale() {
+      return 3 / Math.max(1, LANES.length - 1);
+    }
+
+    function laneDistance(aLane, bLane) {
+      return Math.abs(laneIndex(aLane) - laneIndex(bLane)) * laneWidthScale();
+    }
+
     function knockUnitFrom(unit, centerPos, amount) {
       const dir = unit.pos <= centerPos ? -1 : 1;
       unit.pos = clampPos(unit.pos + dir * amount);
+      normalizeRiverCell(unit);
     }
 
     function clampPos(pos) {
@@ -2868,13 +3661,45 @@ Vines|藤蔓
         hp: overrides.hp || Math.max(45, Math.round(card.hp * scale / Math.max(1, card.count || 1))),
         damage: overrides.damage || Math.round(card.damage * scale / Math.max(1, Math.min(card.count || 1, 4))),
         count: overrides.count,
-        shieldHp: overrides.shieldHp
+        shieldHp: overrides.shieldHp,
+        abilitySummon: overrides.abilitySummon
       });
       state.units.push(unit);
       return unit;
     }
 
     function virtualCard(name) {
+      if (name === "Guardienne") {
+        return {
+          name,
+          zh: cardName(name),
+          cost: 0,
+          rarity: "champion",
+          type: "Troop",
+          count: 1,
+          isAir: false,
+          isRanged: false,
+          isSplash: false,
+          isSwarm: false,
+          isBuildingTargeter: false,
+          isWinCondition: false,
+          diesOnAttack: false,
+          canHitAir: false,
+          canHitGround: true,
+          hp: 1180,
+          damage: 190,
+          range: 0.9,
+          speed: 1.35,
+          attacks: true,
+          spawnEvery: 0,
+          spawnName: "",
+          spawnCount: 0,
+          deathSpawnName: "",
+          deathSpawnCount: 0,
+          buildingLife: 0,
+          shieldHp: 0
+        };
+      }
       if (name === "Cursed Hog") {
         return {
           name,
@@ -2979,10 +3804,11 @@ Vines|藤蔓
     function aiTurn(side, options = {}) {
       if (state.gameOver) return false;
       if (!options.skipGain) gainElixir(side);
+      const usedAbility = maybeUseChampionAbility(side, "turn");
       const choice = chooseAiPlay(side);
       if (!choice) {
-        log(`${sideName(side)}选择存圣水。`);
-        return false;
+        if (!usedAbility) log(`${sideName(side)}选择存圣水。`);
+        return usedAbility;
       }
       state[elixirKey(side)] -= choice.cost;
       const played = rotateCycle(side, choice.index);
@@ -3038,7 +3864,7 @@ Vines|藤蔓
 
       const pick = scored[0];
       if (!pick || pick.score < 2 && elixir < 9) return null;
-      const place = chooseAiPlacement(side, pick.actual, { enemy, threats, threatenedLane, prediction, ownPush, difficulty });
+      let place = chooseAiPlacement(side, pick.actual, { enemy, threats, threatenedLane, prediction, ownPush, difficulty });
       if (!place) place = PLACEMENTS[0];
       return { ...pick, place };
     }
@@ -3386,7 +4212,6 @@ Vines|藤蔓
     function laneToSide(lane) {
       if (lane === "M") return null;
       return laneIndex(lane) < LANES.length / 2 ? "L" : "R";
-      return null;
     }
 
     function chooseWeakLane(side) {
@@ -3426,6 +4251,8 @@ Vines|藤蔓
       }
       state.effects = [];
       tickUnitsStart();
+      maybeUseChampionAbility("player", "combat");
+      maybeUseChampionAbility("enemy", "combat");
       towerFire("player");
       towerFire("enemy");
       unitActions();
@@ -3443,6 +4270,15 @@ Vines|藤蔓
         if (unit.rooted > 0) unit.rooted--;
         if (unit.jumping > 0) unit.jumping--;
         if (unit.slowed > 0) unit.slowed--;
+        if (unit.cloaked > 0) unit.cloaked--;
+        if (unit.queenBoost > 0) unit.queenBoost--;
+        if (unit.monkProtection > 0) unit.monkProtection--;
+        if (unit.banditStealth > 0) unit.banditStealth--;
+        if (unit.abilityCooldown > 0) unit.abilityCooldown--;
+        if (unit.goblinsteinLink > 0) {
+          zapGoblinsteinLink(unit);
+          unit.goblinsteinLink--;
+        }
         if (unit.poisoned > 0) {
           unit.poisoned--;
           damageUnit(unit, unit.poisonDamage || 45);
@@ -3469,7 +4305,7 @@ Vines|藤蔓
           .filter(u => u.side === enemy && u.hp > 0 && targetable(t, u) && canTowerReach(t, u))
           .sort((a, b) => Math.abs(a.pos - t.pos) - Math.abs(b.pos - t.pos))[0];
         if (target) {
-          damageUnit(target, towerTurnDamage(t));
+          damageUnit(target, towerTurnDamage(t), { attacker: t });
         }
       });
     }
@@ -3505,6 +4341,7 @@ Vines|藤蔓
 
     function attackDamage(unit, target) {
       let damage = Math.round(unit.damage * (unit.rage > 0 ? 1.35 : 1));
+      if (unit.queenBoost > 0) damage = Math.round(damage * 2.45);
       if (infernoBeamNames.has(unit.name)) {
         if (unit.infernoTargetId === target.id) unit.infernoCharge = Math.min(3, (unit.infernoCharge || 0) + 1);
         else {
@@ -3547,6 +4384,7 @@ Vines|藤蔓
     }
 
     function targetable(attacker, target) {
+      if ((target.cloaked > 0 || target.banditStealth > 0) && attacker.side !== target.side) return false;
       if (target.jumping > 0 && !attacker.canHitAir) return false;
       if (target.isAir && !attacker.canHitAir) return false;
       if (!target.isAir && !attacker.canHitGround) return false;
@@ -3634,7 +4472,15 @@ Vines|藤蔓
 
     function damageUnit(unit, amount, options = {}) {
       if (!unit || unit.hp <= 0 || amount <= 0) return { hpDamage: 0, shieldDamage: 0 };
-      const dealt = Math.max(1, Math.round(amount));
+      let dealt = Math.max(1, Math.round(amount));
+      if (unit.monkProtection > 0) {
+        const incoming = dealt;
+        dealt = Math.max(1, Math.round(dealt * 0.35));
+        const attacker = options.attacker;
+        if (attacker && attacker.kind !== "tower" && attacker.side !== unit.side && attacker.hp > 0 && !options.noReflect) {
+          damageUnit(attacker, Math.round(incoming * 0.18), { attacker: unit, noReflect: true });
+        }
+      }
       if (unit.shield > 0) {
         const shieldDamage = Math.min(unit.shield, dealt);
         unit.shield = Math.max(0, unit.shield - dealt);
@@ -3821,6 +4667,7 @@ Vines|藤蔓
         const step = Math.sign(gap) * Math.min(Math.abs(gap), unitStepSpeed(unit));
         moveUnitTo(unit, unit.pos + step);
       }
+      normalizeRiverCell(unit);
     }
 
     function laneStepToward(fromLane, toLane) {
@@ -3845,6 +4692,7 @@ Vines|藤蔓
       if (unit.lane === "M" && (unit.pos < 10 || unit.pos > 10)) {
         unit.lane = chooseWeakLane(unit.side === "player" ? "enemy" : "player");
       }
+      normalizeRiverCell(unit);
     }
 
     function checkTouchdowns() {
@@ -3887,6 +4735,18 @@ Vines|藤蔓
       return unit.isAir || unit.canJumpRiver || isBridgeLane(unit.lane);
     }
 
+    function blockedByRiverCell(unit, lane = unit.lane, pos = unit.pos) {
+      if (!state || state.mode === "touchdown") return false;
+      if (Math.round(pos) !== 10 || !isRiverLane(lane)) return false;
+      return unit.type === "Building" || (!unit.isAir && !unit.canJumpRiver);
+    }
+
+    function normalizeRiverCell(unit) {
+      if (!blockedByRiverCell(unit)) return unit;
+      unit.lane = riverExitLane(unit);
+      return unit;
+    }
+
     function riverExitLane(unit) {
       const sideLane = laneToSide(unit.lane);
       if (sideLane) return sideLane;
@@ -3910,6 +4770,7 @@ Vines|藤蔓
       const removed = state.units.filter(unit => unit.hp <= 0 || (unit.type === "Building" && unit.life <= 0));
       state.units = state.units.filter(unit => unit.hp > 0 && (unit.type !== "Building" || unit.life > 0));
       removed.forEach(unit => {
+        if (unit.hp <= 0) collectChampionSouls(unit);
         if (unit.hp <= 0 && !unit.impactSpent) {
           const payload = releaseDeathPayload(unit);
           if (payload) log(payload);
@@ -3929,6 +4790,14 @@ Vines|藤蔓
         } else {
           log(`${sideName(unit.side)}的 ${cardName(unit.name)} ${reason}。`);
         }
+      });
+    }
+
+    function collectChampionSouls(deadUnit) {
+      if (!deadUnit || deadUnit.type === "Building" || deadUnit.abilitySummon) return;
+      const receivers = state.units.filter(unit => unit.hp > 0 && unit.name === "Skeleton King");
+      receivers.forEach(unit => {
+        unit.souls = Math.min(10, (unit.souls || 0) + Math.max(1, Math.min(3, deadUnit.count || 1)));
       });
     }
 
@@ -4144,6 +5013,14 @@ Vines|藤蔓
       const btn = event.target.closest("[data-hand]");
       if (btn) selectHand(btn.dataset.side, Number(btn.dataset.hand));
     });
+    el("playerAbilityPanel").addEventListener("click", event => {
+      const btn = event.target.closest("[data-ability-id]");
+      if (btn) activateChampionAbilityById(btn.dataset.abilitySide, btn.dataset.abilityId);
+    });
+    el("enemyAbilityPanel").addEventListener("click", event => {
+      const btn = event.target.closest("[data-ability-id]");
+      if (btn) activateChampionAbilityById(btn.dataset.abilitySide, btn.dataset.abilityId);
+    });
     el("playerPlacementGrid").addEventListener("click", event => {
       const btn = event.target.closest("[data-place]");
       if (btn) playSelected(btn.dataset.side, btn.dataset.place);
@@ -4157,7 +5034,10 @@ Vines|藤蔓
       if (!btn) return;
       playBoardCell(Number(btn.dataset.boardRow), btn.dataset.boardLane);
     });
-    ["searchInput", "typeFilter", "costFilter"].forEach(id => el(id).addEventListener("input", renderSetup));
+    ["searchInput", "typeFilter", "sortFilter"].forEach(id => {
+      el(id).addEventListener("input", renderSetup);
+      el(id).addEventListener("change", renderSetup);
+    });
     el("startBtn").addEventListener("click", startBattle);
     el("randomBtn").addEventListener("click", randomBalancedDeck);
     el("clearBtn").addEventListener("click", () => {
