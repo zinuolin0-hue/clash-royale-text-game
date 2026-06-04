@@ -945,6 +945,580 @@
         max-height: 58vh;
       }
     }
+
+    /* Royale UI skin. Gameplay rules unchanged. */
+    :root {
+      --bg: #102f5f;
+      --panel: #f7fbff;
+      --ink: #16365f;
+      --muted: #516d92;
+      --line: #f2c84d;
+      --blue: #1777d7;
+      --red: #d63f43;
+      --gold: #f6c64b;
+      --green: #35a85f;
+      --purple: #7849d6;
+      --soft-blue: #e4f3ff;
+      --soft-red: #ffe5dd;
+      --soft-gold: #fff3b9;
+      --shadow: 0 10px 0 rgba(10, 31, 66, 0.22), 0 22px 36px rgba(5, 15, 35, 0.28);
+      font-family: Impact, "Arial Black", "Trebuchet MS", "Microsoft YaHei", "PingFang SC", sans-serif;
+    }
+
+    body {
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.07) 25%, transparent 25%) 0 0 / 42px 42px,
+        linear-gradient(225deg, rgba(255, 255, 255, 0.06) 25%, transparent 25%) 0 0 / 42px 42px,
+        radial-gradient(circle at 50% 6%, rgba(255, 218, 93, 0.22), transparent 28%),
+        linear-gradient(180deg, #124985 0%, #0c2c5a 48%, #082043 100%);
+      color: var(--ink);
+    }
+
+    .app {
+      max-width: 1480px;
+      padding: 18px;
+    }
+
+    .topbar {
+      position: relative;
+      align-items: center;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      border: 4px solid #f7cc4e;
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 44%),
+        linear-gradient(135deg, #238fe6 0%, #125aaa 50%, #0b3777 100%);
+      box-shadow:
+        inset 0 0 0 3px rgba(255, 255, 255, 0.22),
+        0 9px 0 #082f68,
+        0 20px 30px rgba(0, 12, 35, 0.34);
+    }
+
+    .brand-row {
+      align-items: center;
+      gap: 14px;
+    }
+
+    .title-logo {
+      width: 68px;
+      height: 68px;
+      border: 4px solid #f7cc4e;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 5px 0 #0a3a77, 0 8px 18px rgba(0, 0, 0, 0.22);
+    }
+
+    h1 {
+      color: #fff;
+      font-size: 40px;
+      line-height: 1.05;
+      letter-spacing: 0;
+      text-shadow:
+        0 3px 0 #082f68,
+        2px 0 0 #082f68,
+        -2px 0 0 #082f68,
+        0 0 14px rgba(255, 211, 86, 0.45);
+    }
+
+    .subtitle {
+      color: #e7f4ff;
+      font-family: "Trebuchet MS", "Microsoft YaHei", "PingFang SC", sans-serif;
+      font-weight: 800;
+      line-height: 1.48;
+      text-shadow: 0 2px 0 rgba(5, 29, 70, 0.52);
+    }
+
+    .status-pills {
+      margin-top: 24px;
+    }
+
+    .pill {
+      border: 2px solid #fff1aa;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #fff8c7, #f3c446);
+      color: #5a3200;
+      font-family: "Trebuchet MS", "Microsoft YaHei", "PingFang SC", sans-serif;
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.7), 0 3px 0 #a56b10;
+    }
+
+    .setup-grid,
+    .battle-grid {
+      gap: 18px;
+    }
+
+    .panel {
+      border: 4px solid #f3c34a;
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(224, 239, 255, 0.96)),
+        #f7fbff;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      min-height: 58px;
+      padding: 12px 14px;
+      border-bottom: 4px solid #0b4a91;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 46%),
+        linear-gradient(135deg, #2798ed, #1163bc 58%, #0a3d85);
+      color: #fff;
+      text-shadow: 0 2px 0 #092f67;
+    }
+
+    .panel-title {
+      font-size: 19px;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .panel-body {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(228, 242, 255, 0.92)),
+        #f4f9ff;
+    }
+
+    button,
+    input,
+    select {
+      border-radius: 8px;
+    }
+
+    button {
+      border: 3px solid #174f91;
+      background: linear-gradient(180deg, #ffffff 0%, #dcecff 100%);
+      color: #153967;
+      font-weight: 900;
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.9), 0 4px 0 #0d3e79;
+    }
+
+    button:hover:not(:disabled) {
+      border-color: #f2c84d;
+      background: linear-gradient(180deg, #ffffff 0%, #cde7ff 100%);
+      transform: translateY(-1px);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(2px);
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.7), 0 2px 0 #0d3e79;
+    }
+
+    .primary {
+      border-color: #fff1aa;
+      background: linear-gradient(180deg, #ffe784, #f0ad19);
+      color: #4e2700;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.76);
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.72), 0 5px 0 #9c5b09;
+    }
+
+    .secondary {
+      background: linear-gradient(180deg, #ffffff, #dbeeff);
+      color: #12457f;
+    }
+
+    .danger {
+      border-color: #ffb6a7;
+      background: linear-gradient(180deg, #ffe1d8, #ffaaa1);
+      color: #8f151a;
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.7), 0 4px 0 #8d2427;
+    }
+
+    .filters input,
+    .filters select {
+      min-height: 44px;
+      border: 3px solid #75a4da;
+      background: #ffffff;
+      color: #17385f;
+      font-family: "Trebuchet MS", "Microsoft YaHei", "PingFang SC", sans-serif;
+      font-weight: 800;
+      box-shadow: inset 0 3px 0 rgba(13, 54, 107, 0.08);
+    }
+
+    .card-list {
+      gap: 11px;
+      padding: 4px 8px 8px 2px;
+      scrollbar-color: #f3c34a #d9ebff;
+    }
+
+    .card-tile,
+    .hand-card,
+    .slot,
+    .detail-stat,
+    .tower-box,
+    .hud-card {
+      border: 3px solid #2d609f;
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(219, 235, 255, 0.96));
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.92), 0 4px 0 rgba(14, 57, 111, 0.42);
+    }
+
+    .card-tile,
+    .hand-card {
+      position: relative;
+      min-height: 82px;
+      overflow: hidden;
+    }
+
+    .card-tile::before,
+    .hand-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), transparent 42%);
+    }
+
+    .card-tile.selected,
+    .mode-row button.active,
+    .editor-tabs button.active,
+    .difficulty-row button.active {
+      border-color: #f7cc4e;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(196, 229, 255, 0.95)),
+        var(--soft-blue);
+      color: #0b55a8;
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.94), 0 5px 0 #0f5fae;
+    }
+
+    .card-tile.enemy-selected,
+    .editor-tabs button.enemy-active {
+      border-color: #ffb5a8;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 215, 208, 0.94)),
+        var(--soft-red);
+      color: #9f1e24;
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.88), 0 5px 0 #94252c;
+    }
+
+    .card-tile.inspected {
+      outline: 4px solid rgba(246, 198, 75, 0.68);
+      outline-offset: 2px;
+    }
+
+    .cost {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #e7ccff;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 25%, #efddff 0 16%, transparent 17%),
+        linear-gradient(180deg, #9f67ff, #5b26b6);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 900;
+      text-shadow: 0 2px 0 #36106b;
+      box-shadow: 0 3px 0 #32146c, 0 0 12px rgba(132, 70, 220, 0.38);
+      z-index: 1;
+    }
+
+    .card-name,
+    .detail-title {
+      color: #173863;
+      font-weight: 900;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.86);
+      z-index: 1;
+    }
+
+    .card-meta,
+    .detail-subtitle,
+    .detail-section h4,
+    .hud-label,
+    .side-status,
+    .source-note,
+    .ability-button small {
+      color: #49688e;
+      font-family: "Trebuchet MS", "Microsoft YaHei", "PingFang SC", sans-serif;
+      font-weight: 800;
+    }
+
+    .mini-badge {
+      border: 2px solid #f1c04c;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #fff8cf, #ffe07a);
+      color: #5b3300;
+      font-size: 11px;
+      font-weight: 900;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    }
+
+    .card-detail {
+      border: 4px solid #7aaee2;
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(220, 238, 255, 0.96));
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.9), 0 5px 0 rgba(17, 73, 137, 0.3);
+    }
+
+    .detail-list {
+      color: #24486f;
+      font-family: "Trebuchet MS", "Microsoft YaHei", "PingFang SC", sans-serif;
+      font-weight: 700;
+    }
+
+    .hud-card {
+      min-height: 72px;
+      border-color: #f3c34a;
+      background:
+        linear-gradient(180deg, rgba(255, 250, 215, 0.96), rgba(224, 241, 255, 0.96));
+    }
+
+    .hud-value {
+      color: #113b70;
+      font-size: 22px;
+      text-shadow: 0 1px 0 #fff;
+    }
+
+    .side-status strong {
+      color: #123b70;
+      font-size: 20px;
+    }
+
+    .tower-box.enemy {
+      border-color: #ffb0a2;
+      background: linear-gradient(180deg, #ffe5dd, #ffd1ca);
+    }
+
+    .tower-box.player {
+      border-color: #8dc0ef;
+      background: linear-gradient(180deg, #e7f6ff, #cce8ff);
+    }
+
+    .bar {
+      height: 10px;
+      border: 2px solid rgba(9, 45, 88, 0.34);
+      background: rgba(11, 33, 66, 0.18);
+    }
+
+    .map {
+      min-height: 560px;
+      border: 5px solid #f3c34a;
+      border-radius: 8px;
+      background:
+        linear-gradient(90deg, transparent 0 48%, rgba(82, 184, 255, 0.25) 48% 52%, transparent 52%),
+        linear-gradient(180deg, rgba(221, 72, 74, 0.22) 0%, transparent 28%, transparent 72%, rgba(46, 128, 224, 0.24) 100%),
+        #102641;
+      color: #eaf5ff;
+      box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.12), inset 0 0 34px rgba(0, 0, 0, 0.28);
+    }
+
+    .map-hint {
+      color: #dbeeff;
+      font-family: "Trebuchet MS", "Microsoft YaHei", "PingFang SC", sans-serif;
+      font-weight: 900;
+      text-shadow: 0 2px 0 rgba(0, 18, 40, 0.62);
+    }
+
+    .arena-board {
+      gap: 3px;
+    }
+
+    .lane-head {
+      min-height: 32px;
+      border: 2px solid #f3c34a;
+      border-radius: 8px 8px 0 0;
+      background: linear-gradient(180deg, #2e91e8, #0c4b9b);
+      color: #fff;
+      text-shadow: 0 2px 0 #072f67;
+    }
+
+    .arena-cell {
+      min-height: 34px;
+      border: 2px solid #315b8b;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.08)),
+        #132b4b;
+      color: #e8f4ff;
+      font-family: "Trebuchet MS", "Microsoft YaHei", "PingFang SC", sans-serif;
+      font-weight: 800;
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+    }
+
+    .arena-cell:hover:not(:disabled) {
+      border-color: #f3c34a;
+      background: #1b4778;
+    }
+
+    .arena-cell.legal {
+      border-color: #6bc2ff;
+      background: #113f6f;
+    }
+
+    .arena-cell.selected-target {
+      outline: 3px solid #ffe174;
+      outline-offset: -3px;
+      box-shadow: inset 0 0 16px rgba(255, 226, 115, 0.36);
+    }
+
+    .arena-cell.river {
+      border-color: #65caff;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.13), transparent 45%),
+        #0d5f9e;
+    }
+
+    .arena-cell.bridge {
+      border-color: #caa36b;
+      background: #5c4223;
+    }
+
+    .arena-cell.neutral {
+      border-color: #8798ad;
+      background: #29344d;
+    }
+
+    .arena-cell.goal {
+      border-color: #f3c34a;
+      background: #5b3f17;
+    }
+
+    .row-mark {
+      color: #ffdf7b;
+      text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
+    }
+
+    .cell-item.tower {
+      color: #ffe27d;
+    }
+
+    .cell-item.player {
+      color: #a8d8ff;
+    }
+
+    .cell-item.enemy {
+      color: #ffb6b0;
+    }
+
+    .cell-item.beam {
+      color: #fff06f;
+      text-shadow: 0 0 12px rgba(255, 222, 80, 0.92);
+    }
+
+    .arena-danmaku {
+      border: 3px solid rgba(255, 230, 133, 0.54);
+      background: rgba(6, 32, 70, 0.64);
+      color: rgba(255, 245, 180, 0.95);
+      font-size: 32px;
+      text-shadow: 0 0 18px rgba(255, 211, 86, 0.92), 0 3px 0 #06234a;
+    }
+
+    .hand-card.active {
+      border-color: #f3c34a;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 236, 158, 0.96)),
+        var(--soft-gold);
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.94), 0 5px 0 #a96d10;
+    }
+
+    .placement-grid button,
+    .ability-button {
+      min-height: 56px;
+    }
+
+    .ability-button {
+      border-color: #d9b4ff;
+      background: linear-gradient(180deg, #fff, #f0ddff);
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.88), 0 4px 0 #6c38a8;
+    }
+
+    .log {
+      border: 4px solid #7aaee2;
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(232, 243, 255, 0.96));
+      color: #173b63;
+      font-family: "Trebuchet MS", "Microsoft YaHei", "PingFang SC", sans-serif;
+      font-weight: 700;
+      box-shadow: inset 0 3px 0 rgba(12, 65, 126, 0.08);
+    }
+
+    .log-entry {
+      border-bottom-color: rgba(25, 82, 144, 0.16);
+    }
+
+    .modal {
+      background: rgba(3, 16, 40, 0.72);
+    }
+
+    .modal-card {
+      border: 5px solid #f3c34a;
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(221, 238, 255, 0.98));
+      box-shadow: 0 10px 0 #0b3b78, 0 24px 46px rgba(0, 0, 0, 0.38);
+    }
+
+    .modal-card h2 {
+      color: #113b70;
+      text-shadow: 0 1px 0 #fff;
+    }
+
+    .source-note {
+      border-left: 5px solid #f3c34a;
+      border-radius: 0 8px 8px 0;
+      background: rgba(255, 246, 190, 0.72);
+      padding: 10px 12px;
+      color: #455e7f;
+    }
+
+    .source-note a {
+      color: #0f62b5;
+    }
+
+    @media (max-width: 900px) {
+      .topbar {
+        align-items: flex-start;
+      }
+
+      h1 {
+        font-size: 34px;
+      }
+
+      .status-pills {
+        margin-top: 4px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .app {
+        padding: 12px;
+      }
+
+      .topbar {
+        padding: 12px;
+      }
+
+      .brand-row {
+        gap: 10px;
+      }
+
+      .title-logo {
+        width: 48px;
+        height: 48px;
+        margin-top: 0;
+        border-width: 3px;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      .subtitle {
+        font-size: 13px;
+      }
+
+      .panel-head {
+        min-height: 52px;
+      }
+
+      .arena-danmaku {
+        font-size: 22px;
+      }
+    }
   </style>
 </head>
 <body>
