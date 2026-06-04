@@ -2049,6 +2049,10 @@ Vines|藤蔓
       "Goblin Curse": { radius: 3.0, towerRatio: 0.30 },
       "Vines": { radius: 3.2, towerRatio: 0.30 }
     };
+    const RAGE_DAMAGE = 148;
+    const RAGE_DURATION_TURNS = 3;
+    const RAGE_ATTACK_MULTIPLIER = 1.35;
+    const RAGE_MOVE_MULTIPLIER = 1.35;
     const lineSpells = {
       "The Log": { length: 10.1, width: 3.9, knock: 0.9, towerRatio: 0.15 },
       "Barbarian Barrel": { length: 4.5, width: 2.6, knock: 0.45, towerRatio: 0.20 }
@@ -2205,7 +2209,7 @@ Vines|藤蔓
       if (card.type === "Spell") {
         const area = spellAreas[card.name];
         const line = lineSpells[card.name];
-        const hasDirectDamage = !["Mirror", "Clone", "Rage", "Freeze", "Tornado", "Goblin Barrel", "Graveyard"].includes(card.name);
+        const hasDirectDamage = !["Mirror", "Clone", "Freeze", "Tornado", "Goblin Barrel", "Graveyard"].includes(card.name);
         rows.push(["基础伤害", hasDirectDamage ? spellDamage(card.name, card.cost) : "无直接伤害"]);
         rows.push(["对塔伤害", hasDirectDamage ? Math.max(1, Math.round(spellDamage(card.name, card.cost) * towerSpellRatio(card.name))) : "无直接伤害"]);
         rows.push(["作用范围", line ? `路径长${line.length} · 宽${line.width}` : area?.radius ? `半径 ${area.radius}` : "按特殊效果结算"]);
@@ -2305,6 +2309,7 @@ Vines|藤蔓
       if (card.name === "Goblin Drill") notes.push("哥布林钻机是全场部署建筑，可钻到敌方半场或中线位置，并持续产出哥布林；破裂后再放出哥布林。");
       if (card.name === "Goblin Machine") notes.push("哥布林机甲的普通手臂是近战地面攻击；火箭发射器会预瞄 2.5 到 5 格内的空中或地面目标当前位置，下回合落点爆炸，目标离开落点就会落空。");
       if (banditDashCards.has(card.name)) notes.push("前方 3.5 到 6 格有可攻击的地面单位或防御塔、且身边没有近战目标时，会先进入“冲刺”状态；冲刺准备阶段不会受到伤害，下一次行动会冲到目标面前并造成冲撞伤害。");
+      if (card.name === "Lumberjack") notes.push("狂暴樵夫死亡时会在原地掉落狂暴法术，造成少量范围伤害，并让范围内友方单位和建筑进入狂暴。");
       if (card.name === "Elixir Collector") notes.push("圣水收集器不攻击，每隔数回合为己方额外生成圣水。");
       if (card.spawnName && card.type !== "Building") notes.push(`存活期间会${spawnRuleText(card)}。`);
       if (card.deathSpawnCount > 0 && !["Goblin Drill", "Bomb Tower"].includes(card.name)) notes.push(`死亡或破裂时会释放 ${card.deathSpawnCount} 个${cardName(card.deathSpawnName)}。`);
@@ -2338,7 +2343,7 @@ Vines|藤蔓
       const special = {
         "Goblin Barrel": "飞桶会在目标点生成 3 个哥布林。",
         "Graveyard": "墓园会在目标区域持续生成骷髅，用于配合存活单位抗塔。",
-        "Rage": "狂暴会提升友方单位移动和攻击速度，并对区域敌人造成少量伤害。",
+        "Rage": `狂暴会先造成 ${RAGE_DAMAGE} 点平台化范围伤害，再让友方单位和建筑狂暴 ${RAGE_DURATION_TURNS} 回合；回合制里表现为攻击伤害提高 ${Math.round((RAGE_ATTACK_MULTIPLIER - 1) * 100)}%，移动距离提高 ${Math.round((RAGE_MOVE_MULTIPLIER - 1) * 100)}%。`,
         "Freeze": "冰冻会让范围内敌方单位短暂停止行动。",
         "Tornado": "飓风会把范围内单位向中心拉扯，并可配合激活国王塔。",
         "Goblin Curse": "哥布林诅咒会标记敌方非建筑单位，被击败后转化为己方哥布林。",
@@ -4367,12 +4372,7 @@ Vines|藤蔓
         return;
       }
       if (spell === "Rage") {
-        areaDamage(side, lane, targetPos, 95, { radius: area.radius });
-        const buffed = buffFriendlyArea(friendly, lane, targetPos, area.radius, unit => {
-          unit.rage = Math.max(unit.rage, 3);
-        });
-        damageTowersInArea(enemy, lane, targetPos, Math.round(95 * area.towerRatio), area.radius, cardName(spell));
-        if (buffed > 0) log(`${sideName(side)}的 ${cardName(spell)} 加速了 ${buffed} 个友方单位。`);
+        applyRageArea(side, lane, targetPos, cardName(spell));
         return;
       }
       if (spell === "Clone") {
@@ -4435,9 +4435,23 @@ Vines|藤蔓
       const exact = {
         "Rocket": 760, "Lightning": 560, "Fireball": 430, "Poison": 330, "Arrows": 270,
         "Earthquake": 290, "The Log": 240, "Zap": 165, "Giant Snowball": 185,
-        "Void": 390, "Royal Delivery": 260, "Freeze": 95, "Tornado": 120, "Rage": 95
+        "Void": 390, "Royal Delivery": 260, "Freeze": 95, "Tornado": 120, "Rage": RAGE_DAMAGE
       };
       return exact[name] || Math.max(90, cost * 115);
+    }
+
+    function applyRageArea(side, lane, pos, label = cardName("Rage"), options = {}) {
+      const enemy = side === "player" ? "enemy" : "player";
+      const area = spellAreas.Rage;
+      const units = areaDamage(side, lane, pos, RAGE_DAMAGE, { radius: area.radius });
+      const towers = damageTowersInArea(enemy, lane, pos, Math.round(RAGE_DAMAGE * area.towerRatio), area.radius, label);
+      const buffed = buffFriendlyArea(side, lane, pos, area.radius, unit => {
+        unit.rage = Math.max(unit.rage, RAGE_DURATION_TURNS);
+        if (unit.spawnName && unit.spawnCooldown > 1) unit.spawnCooldown = Math.max(1, unit.spawnCooldown - 1);
+      });
+      state.effects.push({ kind: "blast", lane, pos, radius: area.radius, label, short: "狂" });
+      if (options.log !== false) log(`${sideName(side)}的 ${label} 生效，伤害波及 ${units} 个敌方单位${towers ? `和 ${towers} 座塔` : ""}，并让 ${buffed} 个友方单位/建筑进入狂暴。`);
+      return { units, towers, buffed };
     }
 
     function towerSpellRatio(name) {
@@ -4484,7 +4498,7 @@ Vines|藤蔓
     function buffFriendlyArea(side, lane, pos, radius, apply) {
       let count = 0;
       state.units.forEach(unit => {
-        if (unit.side !== side || unit.hp <= 0 || unit.type === "Building") return;
+        if (unit.side !== side || unit.hp <= 0) return;
         if (areaDistance(lane, pos, unit.lane, unit.pos) > radius) return;
         apply(unit);
         count++;
@@ -5572,7 +5586,7 @@ Vines|藤蔓
     }
 
     function attackDamage(unit, target) {
-      let damage = Math.round(unit.damage * (unit.rage > 0 ? 1.35 : 1));
+      let damage = Math.round(unit.damage * (unit.rage > 0 ? RAGE_ATTACK_MULTIPLIER : 1));
       if (unit.queenBoost > 0) damage = Math.round(damage * 2.45);
       if (infernoBeamNames.has(unit.name)) {
         if (unit.infernoTargetId === target.id) unit.infernoCharge = Math.min(3, (unit.infernoCharge || 0) + 1);
@@ -5766,7 +5780,7 @@ Vines|藤蔓
       const enemy = unit.side === "player" ? "enemy" : "player";
       const lane = target.lane || unit.lane;
       const pos = target.pos || unit.pos;
-      const baseDamage = Math.round(unit.damage * (unit.rage > 0 ? 1.35 : 1));
+      const baseDamage = Math.round(unit.damage * (unit.rage > 0 ? RAGE_ATTACK_MULTIPLIER : 1));
       const name = unit.name;
       let message = "";
 
@@ -5875,6 +5889,10 @@ Vines|藤蔓
         });
         return `${sideName(unit.side)}的 ${cardName(unit.name)} 被击倒，在原地留下炸弹，约 ${fuse} 回合后爆炸。`;
       }
+      if (unit.name === "Lumberjack") {
+        const result = applyRageArea(unit.side, lane, clampPos(pos), `${cardName(unit.name)}死亡狂暴`, { log: false });
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 被击倒，在原地掉落${cardName("Rage")}，波及 ${result.units} 个敌方单位${result.towers ? `和 ${result.towers} 座塔` : ""}，并狂暴 ${result.buffed} 个友方单位/建筑。`;
+      }
       if (unit.name === "Night Witch") {
         spawnManyAround(unit.side, "Bats", lane, clampPos(pos), 1, 0.62);
         return `${sideName(unit.side)}的 ${cardName(unit.name)} 被击倒，最后召唤出 1 只${cardName("Bats")}。`;
@@ -5961,7 +5979,7 @@ Vines|藤蔓
     }
 
     function unitStepSpeed(unit) {
-      return unit.speed * (unit.rage > 0 ? 1.35 : 1) * (unit.slowed > 0 ? 0.55 : 1);
+      return unit.speed * (unit.rage > 0 ? RAGE_MOVE_MULTIPLIER : 1) * (unit.slowed > 0 ? 0.55 : 1);
     }
 
     function moveForward(unit) {
@@ -6074,11 +6092,16 @@ Vines|藤蔓
       state.units.forEach(unit => {
         if (unit.hp <= 0 || !unit.spawnName || unit.spawnCount <= 0) return;
         if (unit.spawnSeconds > 0) {
-          unit.spawnCooldown = Math.max(0, (unit.spawnCooldown || cooldownTurns(unit.spawnSeconds)) - 1);
+          const tick = unit.rage > 0 ? 2 : 1;
+          unit.spawnCooldown = Math.max(0, (unit.spawnCooldown || cooldownTurns(unit.spawnSeconds)) - tick);
           if (unit.spawnCooldown > 0) return;
           unit.spawnCooldown = cooldownTurns(unit.spawnSeconds);
-        } else if (unit.spawnEvery <= 0 || state.turn % unit.spawnEvery !== 0) {
-          return;
+        } else {
+          if (unit.spawnEvery <= 0) return;
+          const interval = Math.max(1, unit.spawnEvery);
+          const progress = state.turn % interval;
+          const ragedEarlySpawn = unit.rage > 0 && progress === interval - 1;
+          if (progress !== 0 && !ragedEarlySpawn) return;
         }
         const spawnName = unit.spawnName;
         const count = Math.max(1, unit.spawnCount || 1);
