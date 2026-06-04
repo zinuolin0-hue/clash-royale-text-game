@@ -2625,6 +2625,7 @@ Vines|藤蔓
     let boardActiveSide = "player";
     let recentRandomDecks = [];
     let autoTimer = null;
+    let onlineStartSyncTimer = null;
     let online = {
       role: null,
       localSide: "player",
@@ -2633,6 +2634,7 @@ Vines|藤蔓
       conn: null,
       peerOpen: false,
       connected: false,
+      startAck: false,
       remoteDeck: [],
       status: "在线双人使用点对点连接：房主创建房间，另一台设备输入房间号加入。"
     };
@@ -2937,6 +2939,7 @@ Vines|藤蔓
       try {
         if (online.peer) online.peer.destroy();
       } catch {}
+      clearOnlineStartSync();
       online = {
         role: null,
         localSide: "player",
@@ -2945,6 +2948,7 @@ Vines|藤蔓
         conn: null,
         peerOpen: false,
         connected: false,
+        startAck: false,
         remoteDeck: [],
         status: silent ? online.status : "已断开在线连接。可以重新创建房间或输入房间号加入。"
       };
@@ -2965,6 +2969,7 @@ Vines|藤蔓
         conn: null,
         peerOpen: false,
         connected: false,
+        startAck: false,
         remoteDeck: [],
         status: "正在进入房间大厅。"
       };
@@ -3027,6 +3032,7 @@ Vines|藤蔓
         conn: null,
         peerOpen: false,
         connected: false,
+        startAck: false,
         remoteDeck: [],
         status: "正在加入房间。"
       };
@@ -3069,6 +3075,7 @@ Vines|藤蔓
         online.connected = true;
         setOnlineStatus(online.role === "host" ? "对手已加入。双方都选满 8 张卡后，房主可以开始。" : "已加入房间。选满 8 张卡后等待房主开始。");
         onlineSendDeck();
+        if (online.role === "host" && state?.mode === "online" && !state.gameOver) scheduleOnlineStartSync();
         renderSetup();
       });
       conn.on("data", message => {
@@ -3091,8 +3098,12 @@ Vines|藤蔓
 
     function onlineSend(message) {
       if (!online.conn || !online.conn.open) return false;
-      online.conn.send(message);
-      return true;
+      try {
+        online.conn.send(message);
+        return true;
+      } catch {
+        return false;
+      }
     }
 
     function onlineSendDeck() {
@@ -3108,13 +3119,36 @@ Vines|藤蔓
     }
 
     function cloneOnlineState() {
-      if (typeof structuredClone === "function") return structuredClone(state);
-      return JSON.parse(JSON.stringify(state));
+      return JSON.parse(JSON.stringify(state, (_, value) => {
+        if (value === Infinity) return 999999;
+        if (value === -Infinity) return -999999;
+        return value;
+      }));
     }
 
     function onlineSendState() {
       if (!state || state.mode !== "online" || online.role !== "host") return;
       onlineSend({ type: "state", state: cloneOnlineState() });
+    }
+
+    function clearOnlineStartSync() {
+      clearTimeout(onlineStartSyncTimer);
+      onlineStartSyncTimer = null;
+    }
+
+    function scheduleOnlineStartSync(attemptsLeft = 6) {
+      if (!state || state.mode !== "online" || online.role !== "host" || state.gameOver) return;
+      clearOnlineStartSync();
+      const payload = cloneOnlineState();
+      onlineSend({ type: "battle-start", state: payload });
+      onlineSend({ type: "state", state: payload });
+      if (online.startAck || attemptsLeft <= 0) return;
+      onlineStartSyncTimer = setTimeout(() => scheduleOnlineStartSync(attemptsLeft - 1), 500);
+    }
+
+    function acknowledgeOnlineStart(remoteState) {
+      if (online.role !== "guest" || !remoteState || remoteState.mode !== "online") return;
+      onlineSend({ type: "battle-ack", turn: remoteState.turn || 1, time: remoteState.time || 0 });
     }
 
     function handleOnlineMessage(message) {
@@ -3126,8 +3160,22 @@ Vines|藤蔓
         renderSetup();
         return;
       }
+      if (message.type === "battle-start") {
+        applyOnlineState(message.state);
+        acknowledgeOnlineStart(message.state);
+        return;
+      }
       if (message.type === "state") {
         applyOnlineState(message.state);
+        acknowledgeOnlineStart(message.state);
+        return;
+      }
+      if (message.type === "battle-ack") {
+        if (online.role === "host") {
+          online.startAck = true;
+          clearOnlineStartSync();
+          setOnlineStatus("玩家B已进入战斗画面。");
+        }
         return;
       }
       if (message.type === "action") {
@@ -3705,6 +3753,7 @@ Vines|藤蔓
       };
       selectedHandIndex = { player: null, enemy: null };
       boardActiveSide = "player";
+      if (gameMode === "online") online.startAck = false;
       if (gameMode === "ai") {
         log(`电脑选择了热门卡组「${enemyDeck.name}」：${cardListText(enemyDeck.cards)}。难度：${AI_DIFFICULTIES[state.aiDifficulty].label}；策略倾向：${state.aiStrategy.name}。`);
       } else if (gameMode === "touchdown") {
@@ -3721,7 +3770,7 @@ Vines|藤蔓
       }
       showScreen("battle");
       renderBattle();
-      if (gameMode === "online") onlineSendState();
+      if (gameMode === "online") scheduleOnlineStartSync();
       if (gameMode === "demo") startDemoLoop();
     }
 
