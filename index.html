@@ -212,6 +212,11 @@
       background: var(--soft-blue);
     }
 
+    .card-tile.inspected {
+      outline: 2px solid rgba(195, 136, 31, 0.45);
+      outline-offset: 2px;
+    }
+
     .card-tile.enemy-selected {
       border-color: var(--red);
       background: var(--soft-red);
@@ -254,6 +259,81 @@
       display: grid;
       gap: 8px;
       margin-bottom: 12px;
+    }
+
+    .card-detail {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcff;
+    }
+
+    .detail-head {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .detail-title {
+      font-size: 18px;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    .detail-subtitle {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 3px;
+    }
+
+    .detail-section {
+      display: grid;
+      gap: 7px;
+    }
+
+    .detail-section h4 {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .detail-stat {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+      padding: 8px;
+      border: 1px solid #e4eaf3;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .detail-stat span:first-child {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .detail-stat span:last-child {
+      font-size: 13px;
+      font-weight: 800;
+      word-break: break-word;
+    }
+
+    .detail-list {
+      margin: 0;
+      padding-left: 18px;
+      color: #334057;
+      font-size: 13px;
+      line-height: 1.45;
     }
 
     .slot {
@@ -932,6 +1012,7 @@
             <button class="primary" id="startBtn" disabled>开始对战</button>
             <button class="secondary" id="randomBtn">给当前玩家随机组一套</button>
             <button class="secondary danger" id="clearBtn">清空</button>
+            <div class="card-detail" id="cardDetail"></div>
             <div class="source-note">
               数据基于 2026 年 5 月卡牌池和热门卡组页面整理；塔兵、英雄槽和进化槽在本文字版里不单独建槽，电脑热门卡组会把进化和英雄视为对应基础卡的强化思路。
             </div>
@@ -1494,6 +1575,210 @@ Vines|藤蔓
       return badges;
     }
 
+    function renderCardDetail() {
+      const card = cardByName.get(inspectedCardName) || cardByName.get(activeSetupDeck()[0]) || CARDS[0];
+      inspectedCardName = card.name;
+      el("cardDetail").innerHTML = cardDetailHtml(card);
+    }
+
+    function cardDetailHtml(card) {
+      const stats = detailStats(card);
+      const mechanics = detailMechanics(card);
+      const sources = detailSourceNotes(card);
+      return `
+        <div class="detail-head">
+          <span class="cost">${card.name === "Spirit Empress" ? "3/6" : card.cost}</span>
+          <div>
+            <div class="detail-title">${escapeAttr(card.zh)}</div>
+            <div class="detail-subtitle">${escapeAttr(card.name)} · ${typeLabel(card.type)} · ${rarityLabel(card.rarity)}</div>
+          </div>
+        </div>
+        <div class="detail-section">
+          <h4>战场数据（文字版平台化）</h4>
+          <div class="detail-grid">${stats.map(([label, value]) => detailStat(label, value)).join("")}</div>
+        </div>
+        <div class="detail-section">
+          <h4>机制说明</h4>
+          ${detailList(mechanics)}
+        </div>
+        <div class="detail-section">
+          <h4>资料与换算</h4>
+          ${detailList(sources)}
+        </div>
+      `;
+    }
+
+    function detailStat(label, value) {
+      return `<div class="detail-stat"><span>${escapeAttr(label)}</span><span>${escapeAttr(String(value))}</span></div>`;
+    }
+
+    function detailList(items) {
+      return `<ul class="detail-list">${items.map(item => `<li>${escapeAttr(item)}</li>`).join("")}</ul>`;
+    }
+
+    function detailStats(card) {
+      const rows = [
+        ["圣水", card.name === "Spirit Empress" ? "3 / 6" : card.cost],
+        ["类型", `${typeLabel(card.type)} · ${rarityLabel(card.rarity)}`],
+        ["部署区域", deploymentRule(card)]
+      ];
+      if (card.type === "Spell") {
+        const area = spellAreas[card.name];
+        const line = lineSpells[card.name];
+        const hasDirectDamage = !["Mirror", "Clone", "Rage", "Freeze", "Tornado", "Goblin Barrel", "Graveyard"].includes(card.name);
+        rows.push(["基础伤害", hasDirectDamage ? spellDamage(card.name, card.cost) : "无直接伤害"]);
+        rows.push(["对塔伤害", hasDirectDamage ? Math.max(1, Math.round(spellDamage(card.name, card.cost) * towerSpellRatio(card.name))) : "无直接伤害"]);
+        rows.push(["作用范围", line ? `路径长${line.length} · 宽${line.width}` : area?.radius ? `半径 ${area.radius}` : "按特殊效果结算"]);
+        rows.push(["命中目标", area?.groundOnly ? "只影响地面" : "可影响空中和地面"]);
+        return rows;
+      }
+      if (groupDeployProfiles[card.name]) {
+        rows.push(["部署单位", groupProfileText(card)]);
+        rows.push(["单体生命值", individualHpForDetail(card)]);
+        rows.push(["单体伤害", card.attacks ? individualDamageForDetail(card) : "无攻击"]);
+      } else {
+        rows.push(["生命值", card.hp]);
+        rows.push(["每回合伤害", card.attacks ? card.damage : "无攻击"]);
+      }
+      rows.push(["射程", card.attacks ? card.range : "无攻击"]);
+      rows.push(["速度", card.type === "Building" ? "固定建筑" : speedText(card.speed)]);
+      rows.push(["攻击目标", targetRule(card)]);
+      rows.push(["命中能力", hitRule(card)]);
+      if (card.type === "Building") rows.push(["驻场时间", `${card.buildingLife} 回合`]);
+      if (card.shieldHp > 0) rows.push(["护盾生命", individualShield(card)]);
+      if (card.spawnName) rows.push(["持续产出", spawnRuleText(card)]);
+      if (card.deathSpawnCount > 0) rows.push(["死亡产出", `${card.deathSpawnCount} 个${cardName(card.deathSpawnName)}`]);
+      return rows;
+    }
+
+    function groupProfileText(card) {
+      const parts = groupDeployProfiles[card.name] || [];
+      return parts.map(part => `${part.count} × ${cardName(part.name)}${part.shield ? "（带盾）" : ""}`).join("，");
+    }
+
+    function individualHpForDetail(card) {
+      const profile = groupDeployProfiles[card.name];
+      if (!profile) return individualHp(card);
+      return profile.map(part => {
+        const source = cardByName.get(part.name) || virtualCard(part.name);
+        return `${cardName(part.name)} ${individualHp(source)}`;
+      }).join("，");
+    }
+
+    function individualDamageForDetail(card) {
+      const profile = groupDeployProfiles[card.name];
+      if (!profile) return individualDamage(card);
+      return profile.map(part => {
+        const source = cardByName.get(part.name) || virtualCard(part.name);
+        return `${cardName(part.name)} ${source.attacks ? individualDamage(source) : "无攻击"}`;
+      }).join("，");
+    }
+
+    function deploymentRule(card) {
+      if (card.type === "Spell") return ownHalfOnlySpells.has(card.name) ? "只能己方半场" : "全场释放";
+      if (fullArenaDeployCards.has(card.name)) return "全场部署";
+      return "己方半场部署";
+    }
+
+    function targetRule(card) {
+      if (!card.attacks) return "不主动攻击";
+      return card.isBuildingTargeter ? "只锁定建筑" : "优先附近敌方单位或建筑";
+    }
+
+    function hitRule(card) {
+      if (!card.attacks) return "无攻击";
+      if (card.canHitAir && card.canHitGround) return "可打空中和地面";
+      if (card.canHitAir) return "只防空";
+      if (card.canHitGround) return "只打地面";
+      return "无可命中目标";
+    }
+
+    function speedText(speed) {
+      if (speed >= 1.45) return `${speed} 快速`;
+      if (speed <= 0.8) return `${speed} 慢速`;
+      return `${speed} 中速`;
+    }
+
+    function spawnRuleText(card) {
+      if (!card.spawnName) return "无";
+      if (card.spawnSeconds > 0) return `首次约 ${card.firstSpawnSeconds || card.spawnSeconds} 秒，之后每 ${card.spawnSeconds} 秒产出 ${card.spawnCount} 个${cardName(card.spawnName)}`;
+      return `每 ${card.spawnEvery} 回合产出 ${card.spawnCount || 1} 个${cardName(card.spawnName)}`;
+    }
+
+    function detailMechanics(card) {
+      const notes = [];
+      if (card.name === "Spirit Empress") notes.push("精灵女王在本平台保留双形态：3费为地面近战形态，6费为空中远程形态。");
+      if (CHAMPION_ABILITIES[card.name]) {
+        const ability = CHAMPION_ABILITIES[card.name];
+        notes.push(`英雄技能：${ability.label}，消耗 ${ability.cost} 圣水，冷却约 ${ability.cooldown} 秒。${ability.summary}`);
+      }
+      if (groupDeployProfiles[card.name]) notes.push(`部署后不是一个整体，而是分成 ${groupProfileText(card)}。`);
+      if (card.shieldHp > 0) notes.push("带盾单位会先损失护盾；一次性过量伤害只击碎护盾，不会穿透到本体。");
+      if (card.type === "Building") {
+        if (card.attacks) notes.push("建筑固定不移动，会在射程内攻击合法目标。");
+        else notes.push("该建筑不主动攻击，主要用于产兵、拉扯或特殊收益。");
+      }
+      if (card.name === "Bomb Tower") notes.push("炸弹塔消失或被摧毁后会留下 3 秒死亡炸弹，在文字版里换算为当前阶段回合数后爆炸。");
+      if (card.name === "Goblin Drill") notes.push("哥布林钻机是全场部署建筑，可钻到敌方半场或中线位置，并持续产出哥布林；破裂后再放出哥布林。");
+      if (card.name === "Elixir Collector") notes.push("圣水收集器不攻击，每隔数回合为己方额外生成圣水。");
+      if (card.spawnName && card.type !== "Building") notes.push(`存活期间会${spawnRuleText(card)}。`);
+      if (card.deathSpawnCount > 0 && !["Goblin Drill", "Bomb Tower"].includes(card.name)) notes.push(`死亡或破裂时会释放 ${card.deathSpawnCount} 个${cardName(card.deathSpawnName)}。`);
+      if (card.name === "Golem") notes.push("戈仑石人死亡时造成范围爆炸并分裂成两个小戈仑；小戈仑死亡也会产生小范围爆炸。");
+      if (card.name === "Giant Skeleton") notes.push("骷髅巨人死亡后留下 3 秒炸弹，在文字版里按当前圣水阶段换算成回合后爆炸。");
+      if (card.name === "Night Witch") notes.push("暗夜女巫会周期召唤蝙蝠，死亡时也会留下最后一只蝙蝠。");
+      if (card.name === "Lava Hound") notes.push("熔岩猎犬本体只攻击建筑；死亡后分裂成 6 只小猎犬，小猎犬可以攻击普通单位和建筑。");
+      if (card.name === "Mother Witch") notes.push("女巫婆婆击败敌方非建筑单位时，会把它们转化为己方的诅咒野猪；诅咒野猪只看建筑。");
+      if (infernoBeamNames.has(card.name)) notes.push("地狱系射线会锁定目标并逐回合升温，对坦克更致命；目标丢失后充能重置。");
+      if (card.diesOnAttack) notes.push("一次性冲击单位接触目标后会消失，并触发自身撞击、爆炸或落地效果。");
+      if (card.isBuildingTargeter) notes.push("只会主动寻找建筑目标；被勾引时会根据索敌规则被建筑或可锁定目标牵引。");
+      if (card.isAir) notes.push("空中单位可以越过河道，不受地面河道格限制。");
+      if (riverJumpers.has(card.name)) notes.push("该单位可跨越河道，不必只能从桥头通过。");
+      if (card.isSplash) notes.push("攻击或爆炸会按范围伤害处理，更适合处理多人单位。");
+      if (card.type === "Spell") notes.push(...spellMechanicNotes(card));
+      if (!notes.length) notes.push("没有额外专属机制，按基础移动、索敌、攻击、死亡结算规则执行。");
+      return [...new Set(notes)];
+    }
+
+    function spellMechanicNotes(card) {
+      const area = spellAreas[card.name];
+      const notes = [];
+      if (ownHalfOnlySpells.has(card.name)) notes.push("该法术在本平台只能从己方半场释放，符合滚木、滚桶、皇家速递一类的方向性限制。");
+      else notes.push("该法术可以全场释放。");
+      if (area?.radius) notes.push(`平台化范围半径为 ${area.radius} 格；靠近塔和单位时可同时蹭到多个目标。`);
+      if (area?.knock) notes.push("命中后带击退。");
+      if (area?.slow) notes.push("命中后带减速。");
+      if (area?.stun) notes.push("命中后带短暂眩晕。");
+      if (area?.groundOnly) notes.push("只影响地面目标，对建筑有额外收益。");
+      if (lineSpells[card.name]) notes.push("按一条路径滚动结算，路径内单位都会受到伤害。");
+      const special = {
+        "Goblin Barrel": "飞桶会在目标点生成 3 个哥布林。",
+        "Graveyard": "墓园会在目标区域持续生成骷髅，用于配合存活单位抗塔。",
+        "Rage": "狂暴会提升友方单位移动和攻击速度，并对区域敌人造成少量伤害。",
+        "Freeze": "冰冻会让范围内敌方单位短暂停止行动。",
+        "Tornado": "飓风会把范围内单位向中心拉扯，并可配合激活国王塔。",
+        "Goblin Curse": "哥布林诅咒会标记敌方非建筑单位，被击败后转化为己方哥布林。",
+        "Clone": "克隆会复制范围内友方单位，克隆体血量很低。",
+        "Mirror": "镜像会复制上一张己方非镜像出牌；文字版里按上一张牌的当前平台数据结算。",
+        "Void": "虚空按命中目标数量调整伤害，目标越少单体越痛。",
+        "Vines": "藤蔓会缠住区域目标并造成伤害。",
+        "Royal Delivery": "皇家速递只在己方半场落下，并造成范围伤害。"
+      };
+      if (special[card.name]) notes.push(special[card.name]);
+      return notes;
+    }
+
+    function detailSourceNotes(card) {
+      const notes = [
+        "卡牌类型、费用、稀有度、目标类型和特殊机制按官方卡牌描述与公开资料逐项核对；数值按当前文字版棋盘重新缩放。",
+        "生命值、伤害、射程、速度、范围、驻场和回合数显示的是本平台实战结算值。"
+      ];
+      if (card.type === "Spell") notes.push("法术范围按文字棋盘格换算，允许出现蹭塔、同时命中单位和建筑等原作思路。");
+      if (groupDeployProfiles[card.name]) notes.push("多人卡牌已按原作单位数量拆开，不再作为一个整体单位结算。");
+      if (card.name === "Goblin Drill") notes.push("哥布林钻机的全场部署是官方机制中的特殊建筑例外。");
+      if (card.name === "Bomb Tower") notes.push("炸弹塔死亡炸弹参考原作 3 秒延迟，在文字版中换算为当前阶段回合数。");
+      return notes;
+    }
+
     function makeProfile(seed, index) {
       const type = troopTypeOverrides.has(seed.name)
         ? "Troop"
@@ -1560,6 +1845,7 @@ Vines|藤蔓
     let gameMode = "ai";
     let aiDifficulty = "normal";
     let editingSide = "player";
+    let inspectedCardName = "Knight";
     let state = null;
     let selectedHandIndex = { player: null, enemy: null };
     let boardActiveSide = "player";
@@ -1698,7 +1984,7 @@ Vines|藤蔓
       el("cardList").innerHTML = filtered.map(card => {
         const picked = deck.includes(card.name);
         return `
-          <button class="card-tile ${picked ? "selected" : ""} ${picked && editingSide === "enemy" ? "enemy-selected" : ""}" data-card="${card.name}">
+          <button class="card-tile ${picked ? "selected" : ""} ${picked && editingSide === "enemy" ? "enemy-selected" : ""} ${inspectedCardName === card.name ? "inspected" : ""}" data-card="${card.name}">
               <span class="cost">${card.name === "Spirit Empress" ? "3/6" : card.cost}</span>
             <span>
               <span class="card-name">${card.zh}</span>
@@ -1752,9 +2038,11 @@ Vines|藤蔓
         <span class="pill">${isSinglePlayerSetupMode() ? (gameMode === "touchdown" ? "达阵：先赢 3 局" : `电脑难度：${AI_DIFFICULTIES[aiDifficulty].label} · 热门卡组：${META_DECKS.length} 套`) : `${setupSideLabel("player")}：${selectedDeck.length}/8 · ${setupSideLabel("enemy")}：${selectedEnemyHumanDeck.length}/8`}</span>
         <span class="pill">离线单文件</span>
       `;
+      renderCardDetail();
     }
 
     function toggleCard(name) {
+      inspectedCardName = name;
       const deck = activeSetupDeck();
       let nextDeck;
       if (deck.includes(name)) {
