@@ -760,6 +760,11 @@
       text-shadow: 0 0 9px rgba(94, 202, 255, 0.9);
     }
 
+    .cell-item.heal {
+      color: #80e6a8;
+      text-shadow: 0 0 9px rgba(69, 214, 124, 0.85);
+    }
+
     pre {
       display: none;
     }
@@ -1436,6 +1441,11 @@
       text-shadow: 0 0 14px rgba(71, 198, 255, 0.96), 0 2px 0 rgba(0, 29, 73, 0.55);
     }
 
+    .cell-item.heal {
+      color: #99f0b5;
+      text-shadow: 0 0 13px rgba(66, 226, 126, 0.95), 0 2px 0 rgba(0, 52, 25, 0.5);
+    }
+
     .arena-danmaku {
       border: 3px solid rgba(255, 230, 133, 0.54);
       background: rgba(6, 32, 70, 0.64);
@@ -2079,7 +2089,7 @@ Vines|藤蔓
       "Elixir Collector": { life: 14 }
     };
     const winConditions = set(["Hog Rider", "Giant", "Golem", "Balloon", "Royal Giant", "Lava Hound", "Battle Ram", "Ram Rider", "Skeleton Barrel", "Wall Breakers", "Royal Hogs", "Goblin Giant", "Elixir Golem", "Electro Giant", "Goblin Barrel", "Graveyard", "Goblin Drill", "X-Bow", "Mortar", "Mega Knight", "Giant Skeleton", "Goblinstein", "Rune Giant"]);
-    const riverJumpers = set(["Hog Rider", "Royal Hogs", "Prince", "Dark Prince", "Ram Rider", "Cursed Hog"]);
+    const riverJumpers = set(["Hog Rider", "Royal Hogs", "Prince", "Dark Prince", "Ram Rider", "Cursed Hog", "Battle Healer"]);
     const diesOnAttackNames = set(["Ice Spirit", "Fire Spirit", "Electro Spirit", "Heal Spirit", "Skeleton Barrel", "Battle Ram", "Suspicious Bush", "Wall Breakers"]);
     const ownHalfOnlySpells = set(["The Log", "Barbarian Barrel", "Royal Delivery"]);
     const fullArenaDeployCards = set(["Goblin Drill"]);
@@ -2105,6 +2115,10 @@ Vines|藤蔓
     const RAGE_MOVE_MULTIPLIER = 1.35;
     const MAGIC_ARCHER_PROJECTILE_RANGE = 10.5;
     const MAGIC_ARCHER_PROJECTILE_WIDTH = 0.7;
+    const BATTLE_HEALER_DEPLOY_RADIUS = 2.5;
+    const BATTLE_HEALER_ATTACK_RADIUS = 3.6;
+    const BATTLE_HEALER_DEPLOY_HEAL = 180;
+    const BATTLE_HEALER_ATTACK_HEAL = 155;
     const lineSpells = {
       "The Log": { length: 10.1, width: 3.9, knock: 0.9, towerRatio: 0.15 },
       "Barbarian Barrel": { length: 4.5, width: 2.6, knock: 0.45, towerRatio: 0.20 }
@@ -2182,6 +2196,7 @@ Vines|藤蔓
       if (card.name === "Guards") return ["3人单位", "带盾", "地面", "不防空"];
       if (card.name === "Goblin Machine") return ["近战手臂", "导弹预瞄", "可防空"];
       if (card.name === "Magic Archer") return ["远射程", "穿透箭", "蓝线显示", "可防空"];
+      if (card.name === "Battle Healer") return ["登场治疗", "攻击治疗", "Hover越河", "不疗建筑"];
       if (CHAMPION_ABILITIES[card.name]) return ["英雄技能", `${CHAMPION_ABILITIES[card.name].cost}费`, CHAMPION_ABILITIES[card.name].label];
       if (card.type === "Spell") {
         const badges = [ownHalfOnlySpells.has(card.name) ? "己方半场" : "全场法术"];
@@ -2279,6 +2294,10 @@ Vines|藤蔓
       }
       rows.push(["射程", card.attacks ? card.range : "无攻击"]);
       if (card.name === "Magic Archer") rows.push(["穿透箭路", `约 ${MAGIC_ARCHER_PROJECTILE_RANGE} 格 · 宽 ${MAGIC_ARCHER_PROJECTILE_WIDTH} 格`]);
+      if (card.name === "Battle Healer") {
+        rows.push(["登场治疗", `半径 ${BATTLE_HEALER_DEPLOY_RADIUS} · ${BATTLE_HEALER_DEPLOY_HEAL} 点`]);
+        rows.push(["攻击治疗", `半径 ${BATTLE_HEALER_ATTACK_RADIUS} · ${BATTLE_HEALER_ATTACK_HEAL} 点`]);
+      }
       rows.push(["速度", card.type === "Building" ? "固定建筑" : speedText(card.speed)]);
       rows.push(["攻击目标", targetRule(card)]);
       rows.push(["命中能力", hitRule(card)]);
@@ -2365,6 +2384,7 @@ Vines|藤蔓
       if (card.name === "Goblin Drill") notes.push("哥布林钻机是全场部署建筑，可钻到敌方半场或中线位置，并持续产出哥布林；破裂后再放出哥布林。");
       if (card.name === "Goblin Machine") notes.push("哥布林机甲的普通手臂是近战地面攻击；火箭发射器会预瞄 2.5 到 5 格内的空中或地面目标当前位置，下回合落点爆炸，目标离开落点就会落空。");
       if (card.name === "Magic Archer") notes.push(`神箭游侠的箭会穿透目标并沿直线继续飞行；本平台按约 7 格锁定射程、${MAGIC_ARCHER_PROJECTILE_RANGE} 格投射距离换算，直线和斜线都会用蓝色线显示，路径上的敌方单位与防御塔都会受伤。`);
+      if (card.name === "Battle Healer") notes.push(`战斗天使登场时会释放一圈治疗光环，攻击命中后也会在自身周围释放治疗；治疗只作用于友方部队，不会治疗建筑、防御塔或已满血单位。她保留 Hover 越河特性，但仍是地面近战单位，不能攻击空中目标。`);
       if (banditDashCards.has(card.name)) notes.push("前方 3.5 到 6 格有可攻击的地面单位或防御塔、且身边没有近战目标时，会先进入“冲刺”状态；冲刺准备阶段不会受到伤害，下一次行动会冲到目标面前并造成冲撞伤害。");
       if (card.name === "Lumberjack") notes.push("狂暴樵夫死亡时会在原地掉落狂暴法术，造成少量范围伤害，并让范围内友方单位和建筑进入狂暴。");
       if (card.name === "Elixir Collector") notes.push("圣水收集器不攻击，每隔数回合为己方额外生成圣水。");
@@ -2424,6 +2444,7 @@ Vines|藤蔓
       if (card.name === "Goblin Drill") notes.push("哥布林钻机的全场部署是官方机制中的特殊建筑例外。");
       if (card.name === "Bomb Tower") notes.push("炸弹塔死亡炸弹参考原作 3 秒延迟，在文字版中换算为当前阶段回合数。");
       if (card.name === "Magic Archer") notes.push("神箭游侠的 7 格射程、穿透箭和约 11 格投射距离按公开卡牌数据换算为文字棋盘：锁定目标后沿射击方向继续判定路径命中。");
+      if (card.name === "Battle Healer") notes.push("战斗天使的登场治疗、攻击治疗、Hover 越河和不治疗建筑按官方卡牌说明与平衡资料换算；治疗数值显示为本平台实战结算值。");
       return notes;
     }
 
@@ -3143,6 +3164,7 @@ Vines|藤蔓
         countdownFlags: { before180: false, suddenDeath: false, final10: false },
         units: [],
         effects: [],
+        queuedEffects: [],
         pendingExplosions: [],
         pendingMissiles: [],
         nextId: 1,
@@ -3908,6 +3930,7 @@ Vines|藤蔓
         if (effect.kind === "beam" && beamCoversCell(effect, row, lane)) details.push("地狱塔/地狱飞龙一类的持续锁定光线经过这里");
         if (effect.kind === "dash" && beamCoversCell(effect, row, lane)) details.push(`${effect.label || "冲刺路线"}经过这里`);
         if (effect.kind === "pierce" && beamCoversCell(effect, row, lane)) details.push(`${effect.label || "蓝色穿透箭"}经过这里`);
+        if (effect.kind === "heal" && blastCoversCell(effect, row, lane)) details.push(`${effect.label || "治疗光环"}覆盖这里，只治疗友方部队`);
         if (effect.kind === "blast" && blastCoversCell(effect, row, lane)) details.push(`${effect.label || "爆炸"}的范围覆盖这里`);
       });
       (state.pendingExplosions || []).forEach(bomb => {
@@ -3975,6 +3998,9 @@ Vines|藤蔓
         }
         if (effect.kind === "pierce" && beamCoversCell(effect, row, lane)) {
           parts.push({ className: "pierce", text: `线:${effect.short || "神箭"}` });
+        }
+        if (effect.kind === "heal" && blastCoversCell(effect, row, lane)) {
+          parts.push({ className: "heal", text: `疗:${effect.short || "天使"}` });
         }
         if (effect.kind === "blast" && blastCoversCell(effect, row, lane)) {
           parts.push({ className: "beam", text: `爆:${effect.short || "炸"}` });
@@ -4264,6 +4290,7 @@ Vines|藤蔓
       const unit = createUnit(side, actual, lane, pos);
       state.units.push(unit);
       if (actual.name === "Elixir Collector") unit.collectorTicks = 5;
+      if (actual.name === "Battle Healer") battleHealerDeployHeal(unit);
       log(`${sideName(side)}在${place.label}部署 ${cardName(actual.name)}。`);
       return actual;
     }
@@ -5385,6 +5412,10 @@ Vines|藤蔓
         gainElixir("player");
       }
       state.effects = [];
+      if (state.queuedEffects?.length) {
+        state.effects.push(...state.queuedEffects);
+        state.queuedEffects = [];
+      }
       tickUnitsStart();
       processPendingMissiles();
       processPendingExplosions();
@@ -5948,6 +5979,7 @@ Vines|藤蔓
     function dealDamage(attacker, target, damage) {
       if (target.kind === "tower") {
         damageTower(target, target.side, damage, `${cardName(attacker.name)} 攻击`);
+        if (attacker.name === "Battle Healer") battleHealerAttackHeal(attacker);
         return;
       }
       damageUnit(target, damage, { attacker });
@@ -5960,6 +5992,7 @@ Vines|藤蔓
           }
         });
       }
+      if (attacker.name === "Battle Healer") battleHealerAttackHeal(attacker);
     }
 
     function resolveImpactAttack(unit, target) {
@@ -6045,6 +6078,31 @@ Vines|藤蔓
         unit.hp = nextHp;
       });
       return healed;
+    }
+
+    function battleHealerDeployHeal(unit) {
+      const healed = healFriendlyArea(unit.side, unit.lane, unit.pos, BATTLE_HEALER_DEPLOY_RADIUS, BATTLE_HEALER_DEPLOY_HEAL);
+      showHealAura(unit, BATTLE_HEALER_DEPLOY_RADIUS, "战斗天使登场治疗", "登疗", { keepAfterClear: true });
+      log(`${sideName(unit.side)}的 ${cardName(unit.name)} 登场释放治疗光环，治疗了 ${healed} 个友方单位（建筑不会被治疗）。`);
+    }
+
+    function battleHealerAttackHeal(unit) {
+      const healed = healFriendlyArea(unit.side, unit.lane, unit.pos, BATTLE_HEALER_ATTACK_RADIUS, BATTLE_HEALER_ATTACK_HEAL);
+      showHealAura(unit, BATTLE_HEALER_ATTACK_RADIUS, "战斗天使攻击治疗", "攻疗");
+      if (healed > 0) log(`${sideName(unit.side)}的 ${cardName(unit.name)} 攻击后释放治疗光环，治疗了 ${healed} 个友方单位。`);
+    }
+
+    function showHealAura(unit, radius, label, short, options = {}) {
+      const effect = {
+        kind: "heal",
+        lane: unit.lane,
+        pos: unit.pos,
+        radius,
+        label,
+        short
+      };
+      state.effects.push(effect);
+      if (options.keepAfterClear) state.queuedEffects.push({ ...effect });
     }
 
     function releaseDeathPayload(unit, lane = unit.lane, pos = unit.pos) {
