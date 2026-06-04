@@ -1545,6 +1545,7 @@ Vines|藤蔓
       if (card.name === "Goblin Gang") return ["6人单位", "3刀3矛", "含防空"];
       if (card.name === "Rascals") return ["3人单位", "1男2女", "含防空"];
       if (card.name === "Guards") return ["3人单位", "带盾", "地面", "不防空"];
+      if (card.name === "Goblin Machine") return ["近战手臂", "导弹预瞄", "可防空"];
       if (CHAMPION_ABILITIES[card.name]) return ["英雄技能", `${CHAMPION_ABILITIES[card.name].cost}费`, CHAMPION_ABILITIES[card.name].label];
       if (card.type === "Spell") {
         const badges = [ownHalfOnlySpells.has(card.name) ? "己方半场" : "全场法术"];
@@ -1682,11 +1683,13 @@ Vines|藤蔓
 
     function targetRule(card) {
       if (!card.attacks) return "不主动攻击";
+      if (card.name === "Goblin Machine") return "近战手臂打地面；导弹预瞄远处目标";
       return card.isBuildingTargeter ? "只锁定建筑" : "优先附近敌方单位或建筑";
     }
 
     function hitRule(card) {
       if (!card.attacks) return "无攻击";
+      if (card.name === "Goblin Machine") return "近战打地面；导弹可打空地";
       if (card.canHitAir && card.canHitGround) return "可打空中和地面";
       if (card.canHitAir) return "只防空";
       if (card.canHitGround) return "只打地面";
@@ -1720,6 +1723,7 @@ Vines|藤蔓
       }
       if (card.name === "Bomb Tower") notes.push("炸弹塔消失或被摧毁后会留下 3 秒死亡炸弹，在文字版里换算为当前阶段回合数后爆炸。");
       if (card.name === "Goblin Drill") notes.push("哥布林钻机是全场部署建筑，可钻到敌方半场或中线位置，并持续产出哥布林；破裂后再放出哥布林。");
+      if (card.name === "Goblin Machine") notes.push("哥布林机甲的普通手臂是近战地面攻击；火箭发射器会预瞄 2.5 到 5 格内的空中或地面目标当前位置，下回合落点爆炸，目标离开落点就会落空。");
       if (card.name === "Elixir Collector") notes.push("圣水收集器不攻击，每隔数回合为己方额外生成圣水。");
       if (card.spawnName && card.type !== "Building") notes.push(`存活期间会${spawnRuleText(card)}。`);
       if (card.deathSpawnCount > 0 && !["Goblin Drill", "Bomb Tower"].includes(card.name)) notes.push(`死亡或破裂时会释放 ${card.deathSpawnCount} 个${cardName(card.deathSpawnName)}。`);
@@ -1815,7 +1819,7 @@ Vines|藤蔓
         type,
         count,
         isAir,
-        isRanged,
+        isRanged: seed.name === "Goblin Machine" ? false : isRanged,
         isSplash,
         isSwarm,
         isBuildingTargeter,
@@ -1825,7 +1829,7 @@ Vines|藤蔓
         canHitGround,
         hp: Math.max(90, hp),
         damage: Math.max(35, damage),
-        range,
+        range: seed.name === "Goblin Machine" ? 1.05 : range,
         speed,
         attacks,
         spawnEvery: spawner.spawnEvery || 0,
@@ -2495,6 +2499,7 @@ Vines|藤蔓
         units: [],
         effects: [],
         pendingExplosions: [],
+        pendingMissiles: [],
         nextId: 1,
         gameOver: false,
         auto: false,
@@ -3262,6 +3267,11 @@ Vines|藤蔓
           details.push(`${sideName(bomb.side)}的${bomb.label}，还剩 ${bomb.fuse} 回合爆炸`);
         }
       });
+      (state.pendingMissiles || []).forEach(missile => {
+        if (Math.round(missile.pos) === row && laneOccupiesCell(missile.lane, lane)) {
+          details.push(`${sideName(missile.side)}的${missile.label}预瞄点，还剩 ${missile.fuse} 回合落下`);
+        }
+      });
       return details.length
         ? `${laneLabel(lane)}第 ${row} 行：${details.join("；")}`
         : `${laneLabel(lane)}第 ${row} 行：这里暂时没有单位。`;
@@ -3317,6 +3327,11 @@ Vines|藤蔓
       (state.pendingExplosions || []).forEach(bomb => {
         if (Math.round(bomb.pos) === row && laneOccupiesCell(bomb.lane, lane)) {
           parts.push({ className: bomb.side, text: `弹:${bomb.short || "炸"}` });
+        }
+      });
+      (state.pendingMissiles || []).forEach(missile => {
+        if (Math.round(missile.pos) === row && laneOccupiesCell(missile.lane, lane)) {
+          parts.push({ className: missile.side, text: `瞄:${missile.short || "导"}` });
         }
       });
       return parts.slice(0, 2);
@@ -3687,6 +3702,7 @@ Vines|藤蔓
         goblinsteinLink: 0,
         banditStealth: 0,
         abilityCooldown: 0,
+        missileCooldown: card.name === "Goblin Machine" ? 0 : 0,
         abilityUses: 0,
         souls: 0,
         abilitySummon: Boolean(overrides.abilitySummon),
@@ -4695,6 +4711,7 @@ Vines|藤蔓
       }
       state.effects = [];
       tickUnitsStart();
+      processPendingMissiles();
       processPendingExplosions();
       maybeUseChampionAbility("player", "combat");
       maybeUseChampionAbility("enemy", "combat");
@@ -4720,6 +4737,7 @@ Vines|藤蔓
         if (unit.monkProtection > 0) unit.monkProtection--;
         if (unit.banditStealth > 0) unit.banditStealth--;
         if (unit.abilityCooldown > 0) unit.abilityCooldown--;
+        if (unit.missileCooldown > 0) unit.missileCooldown--;
         if (unit.goblinsteinLink > 0) {
           zapGoblinsteinLink(unit);
           unit.goblinsteinLink--;
@@ -4738,6 +4756,32 @@ Vines|藤蔓
         }
         if (unit.type === "Building") unit.life--;
       });
+    }
+
+    function processPendingMissiles() {
+      if (!state.pendingMissiles?.length) return;
+      const remaining = [];
+      state.pendingMissiles.forEach(missile => {
+        missile.fuse--;
+        if (missile.fuse <= 0) explodeGoblinMachineMissile(missile);
+        else remaining.push(missile);
+      });
+      state.pendingMissiles = remaining;
+    }
+
+    function explodeGoblinMachineMissile(missile) {
+      const units = areaDamage(missile.side, missile.lane, missile.pos, missile.damage, {
+        radius: missile.radius,
+        knock: missile.knock || 0
+      });
+      const enemy = missile.side === "player" ? "enemy" : "player";
+      const towers = damageTowersInArea(enemy, missile.lane, missile.pos, missile.towerDamage, missile.radius, missile.label);
+      state.effects.push({ kind: "blast", lane: missile.lane, pos: missile.pos, radius: missile.radius, label: missile.label, short: missile.short || "导" });
+      if (units || towers) {
+        log(`${sideName(missile.side)}的 ${missile.label} 落在预瞄位置，命中 ${units} 个单位${towers ? `和 ${towers} 座塔` : ""}。`);
+      } else {
+        log(`${sideName(missile.side)}的 ${missile.label} 落在预瞄位置，但目标已经离开，未造成伤害。`);
+      }
     }
 
     function processPendingExplosions() {
@@ -4792,6 +4836,7 @@ Vines|藤蔓
       const acting = shuffle(state.units.filter(unit => unit.hp > 0));
       acting.forEach(unit => {
         if (unit.hp <= 0 || unit.frozen > 0 || !unit.attacks) return;
+        if (unit.name === "Goblin Machine") launchGoblinMachineMissile(unit);
         const target = findTarget(unit);
         if (!target) return;
         if (unit.diesOnAttack) {
@@ -4801,6 +4846,55 @@ Vines|藤蔓
         const damage = attackDamage(unit, target);
         dealDamage(unit, target, damage);
       });
+    }
+
+    function launchGoblinMachineMissile(unit) {
+      if (unit.missileCooldown > 0) return false;
+      const target = goblinMachineMissileTarget(unit);
+      if (!target) return false;
+      state.pendingMissiles.push({
+        side: unit.side,
+        lane: target.lane,
+        pos: clampPos(target.pos),
+        fuse: 1,
+        damage: 250,
+        towerDamage: 82,
+        radius: 1.5,
+        knock: 0.25,
+        label: `${cardName(unit.name)}导弹`,
+        short: "机导"
+      });
+      state.effects.push({ kind: "beam", fromLane: unit.lane, fromPos: unit.pos, toLane: target.lane, toPos: target.pos });
+      unit.missileCooldown = cooldownTurns(3.5);
+      log(`${sideName(unit.side)}的 ${cardName(unit.name)} 锁定${target.label}当前位置，导弹将在下回合落到 ${laneLabel(target.lane)}第 ${Math.round(target.pos)} 行。`);
+      return true;
+    }
+
+    function goblinMachineMissileTarget(unit) {
+      const enemy = unit.side === "player" ? "enemy" : "player";
+      const candidates = [
+        ...state.units
+          .filter(target => target.side === enemy && target.hp > 0 && target.cloaked <= 0 && target.banditStealth <= 0)
+          .map(target => ({
+            kind: "unit",
+            lane: target.lane,
+            pos: target.pos,
+            hp: target.hp,
+            label: `${sideName(target.side)}的${cardName(target.name)}`,
+            dist: areaDistance(unit.lane, unit.pos, target.lane, target.pos)
+          })),
+        ...(state.mode === "touchdown" ? [] : Object.values(state.towers[enemy])
+          .filter(towerObj => towerObj.hp > 0)
+          .map(towerObj => ({
+            kind: "tower",
+            lane: towerObj.lane,
+            pos: towerObj.pos,
+            hp: towerObj.hp,
+            label: `${sideName(towerObj.side)}的${towerDisplayName(towerObj)}`,
+            dist: areaDistance(unit.lane, unit.pos, towerObj.lane, towerObj.pos) + 0.35
+          })))
+      ].filter(item => item.dist >= 2.5 && item.dist <= 5.0);
+      return candidates.sort((a, b) => a.dist - b.dist || b.hp - a.hp)[0] || null;
     }
 
     function attackDamage(unit, target) {
@@ -4849,6 +4943,7 @@ Vines|藤蔓
 
     function targetable(attacker, target) {
       if ((target.cloaked > 0 || target.banditStealth > 0) && attacker.side !== target.side) return false;
+      if (attacker.name === "Goblin Machine" && target.isAir) return false;
       if (target.jumping > 0 && !attacker.canHitAir) return false;
       if (target.isAir && !attacker.canHitAir) return false;
       if (!target.isAir && !attacker.canHitGround) return false;
@@ -5255,6 +5350,7 @@ Vines|藤蔓
       state.units = [];
       state.effects = [];
       state.pendingExplosions = [];
+      state.pendingMissiles = [];
       state.playerElixir = 5;
       state.enemyElixir = 5;
       state.pendingActions = { player: false, enemy: true };
