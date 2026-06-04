@@ -3894,6 +3894,27 @@ Vines|藤蔓
       return Math.max(0, Math.round((t.hp / t.maxHp) * 100));
     }
 
+    function viewerSide() {
+      return state?.mode === "online" && online.localSide === "enemy" ? "enemy" : "player";
+    }
+
+    function opponentSideOf(side) {
+      return side === "player" ? "enemy" : "player";
+    }
+
+    function isFlippedOnlineView() {
+      return state?.mode === "online" && viewerSide() === "enemy";
+    }
+
+    function sideColorClass(side) {
+      return state?.mode === "online" ? (side === viewerSide() ? "player" : "enemy") : side;
+    }
+
+    function viewedRows() {
+      const rows = Array.from({ length: 21 }, (_, index) => index);
+      return isFlippedOnlineView() ? rows.reverse() : rows;
+    }
+
     function renderTowers() {
       if (state.mode === "touchdown") {
         const td = state.touchdown;
@@ -3911,14 +3932,16 @@ Vines|藤蔓
         `;
         return;
       }
+      const selfSide = viewerSide();
+      const foeSide = opponentSideOf(selfSide);
       const sides = [
-        ["enemy", sideName("enemy")],
-        ["player", sideName("player")]
+        [foeSide, sideName(foeSide)],
+        [selfSide, sideName(selfSide)]
       ];
       el("towerStrip").innerHTML = sides.map(([side, label]) => {
         const tw = state.towers[side];
         return `
-          <div class="tower-box ${side}">
+          <div class="tower-box ${sideColorClass(side)}">
             <strong>${label}</strong>
             ${["king", "left", "right"].map(k => `
               <div style="margin-top:8px">
@@ -4334,8 +4357,8 @@ Vines|藤蔓
       const border = "─".repeat(colWidth);
       rows.push(`${"".padEnd(6)}${LANES.map(lane => fitText(lane.label, colWidth)).join("  ")}`);
       rows.push(`  ┌${LANES.map(() => border).join("┬")}┐`);
-      for (let row = 0; row <= 20; row++) {
-        const marker = touchdownRowMarker(row) || (row === 10 ? "河" : row === 0 ? "敌" : row === 20 ? "我" : String(row).padStart(2, "0"));
+      viewedRows().forEach(row => {
+        const marker = rowMarker(row, null);
         const body = LANES.map(lane => fitText(cell(row, lane.id), colWidth)).join("│");
         rows.push(`${marker}│${body}│`);
         if (state.mode !== "touchdown" && row === 10) {
@@ -4346,15 +4369,15 @@ Vines|藤蔓
           });
           rows.push(`  ├${riverLabels.map(label => fitText(label, colWidth, "─")).join("┼")}┤`);
         }
-      }
+      });
       rows.push(`  └${LANES.map(() => border).join("┴")}┘`);
       rows.push("");
       rows.push(state.mode === "touchdown"
         ? "底=达阵底线 禁=中央禁区。没有塔、没有河、没有桥；双方只能在己方可下牌区部署。"
         : state.mode === "demo"
-        ? "甲=电脑A 乙=电脑B 塔=防御塔 筑=建筑 空=空军。偏左格走左桥，偏右格走右桥。"
+        ? "A=电脑A B=电脑B 塔=防御塔 筑=建筑 空=空军。偏左格走左桥，偏右格走右桥。"
           : state.mode === "duel" || state.mode === "online"
-            ? "甲=玩家A 乙=玩家B 塔=防御塔 筑=建筑 空=空军。偏左格走左桥，偏右格走右桥。"
+            ? "A=玩家A B=玩家B 塔=防御塔 筑=建筑 空=空军。本方为蓝色，对方为红色；偏左格走左桥，偏右格走右桥。"
             : `我=${sideName("player")} 敌=${sideName("enemy")} 塔=防御塔 筑=建筑 空=空军。偏左格走左桥，偏右格走右桥；普通地面单位只能走桥。`);
       el("arenaMap").textContent = rows.join("\n");
       renderBoard();
@@ -4410,7 +4433,7 @@ Vines|藤蔓
       const legalSide = canUseBoardSide(side);
       const cells = [];
       LANES.forEach(lane => cells.push(`<div class="lane-head">${lane.label}</div>`));
-      for (let row = 0; row <= 20; row++) {
+      viewedRows().forEach(row => {
         LANES.forEach(lane => {
           const result = legalSide ? canPlaceAt(side, lane.id, row) : { ok: false };
           const marker = rowMarker(row, lane.id);
@@ -4426,7 +4449,7 @@ Vines|藤蔓
             </button>
           `);
         });
-      }
+      });
       el("arenaBoard").innerHTML = cells.join("");
     }
 
@@ -4436,9 +4459,11 @@ Vines|藤蔓
         if (isTouchdownNeutralRow(row)) return "禁";
         return String(row).padStart(2, "0");
       }
-      if (row === 10) return isBridgeLane(lane) ? "桥" : "河";
-      if (row === 0) return "敌";
-      if (row === 20) return "我";
+      if (row === 10) return lane && isBridgeLane(lane) ? "桥" : "河";
+      const selfEdge = viewerSide() === "player" ? 20 : 0;
+      const foeEdge = viewerSide() === "player" ? 0 : 20;
+      if (row === selfEdge) return "我";
+      if (row === foeEdge) return "敌";
       return String(row).padStart(2, "0");
     }
 
@@ -4557,7 +4582,7 @@ Vines|藤蔓
       const towers = state.mode === "touchdown" ? [] : [state.towers.enemy.king, state.towers.enemy.left, state.towers.enemy.right, state.towers.player.king, state.towers.player.left, state.towers.player.right];
       towers.forEach(t => {
         if (Math.round(t.pos) === row && laneOccupiesCell(t.lane, lane) && t.hp > 0) {
-          parts.push({ className: `tower ${t.side}`, text: `${mapSide(t.side)}塔:${towerMapName(t)}` });
+          parts.push({ className: `tower ${sideColorClass(t.side)}`, text: `${mapSide(t.side)}塔:${towerMapName(t)}` });
         }
       });
       state.units.forEach(unit => {
@@ -4565,7 +4590,7 @@ Vines|藤蔓
         if (Math.round(unit.pos) === row && laneOccupiesCell(displayLane, lane) && unit.hp > 0) {
           const kind = unitStateMark(unit);
           const name = unit.banditDashCharging ? `${cardName(unit.name)}(冲刺)` : cardName(unit.name);
-          parts.push({ className: unit.side, text: `${mapSide(unit.side)}${kind}:${name}` });
+          parts.push({ className: sideColorClass(unit.side), text: `${mapSide(unit.side)}${kind}:${name}` });
         }
       });
       state.effects.forEach(effect => {
@@ -4587,12 +4612,12 @@ Vines|藤蔓
       });
       (state.pendingExplosions || []).forEach(bomb => {
         if (Math.round(bomb.pos) === row && laneOccupiesCell(bomb.lane, lane)) {
-          parts.push({ className: bomb.side, text: `弹:${bomb.short || "炸"}` });
+          parts.push({ className: sideColorClass(bomb.side), text: `弹:${bomb.short || "炸"}` });
         }
       });
       (state.pendingMissiles || []).forEach(missile => {
         if (Math.round(missile.pos) === row && laneOccupiesCell(missile.lane, lane)) {
-          parts.push({ className: missile.side, text: `瞄:${missile.short || "导"}` });
+          parts.push({ className: sideColorClass(missile.side), text: `瞄:${missile.short || "导"}` });
         }
       });
       return parts.slice(0, 2);
@@ -4621,7 +4646,7 @@ Vines|藤蔓
     }
 
     function mapSide(side) {
-      if (state.mode === "duel" || state.mode === "online" || state.mode === "demo") return side === "player" ? "甲" : "乙";
+      if (state.mode === "duel" || state.mode === "online" || state.mode === "demo") return side === "player" ? "A" : "B";
       return side === "player" ? "我" : "敌";
     }
 
