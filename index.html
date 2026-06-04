@@ -2158,6 +2158,7 @@ Vines|藤蔓
     const noAttackBuildings = set(["Elixir Collector", "Goblin Cage", "Goblin Hut", "Barbarian Hut", "Tombstone", "Furnace", "Goblin Drill"]);
     const infernoBeamNames = set(["Inferno Tower", "Inferno Dragon"]);
     const spawnerProfiles = {
+      "Witch": { spawnName: "Skeletons", spawnEvery: 0, spawnSeconds: 7, firstSpawnSeconds: 1, spawnCount: 4 },
       "Night Witch": { spawnName: "Bats", spawnEvery: 0, spawnSeconds: 5, firstSpawnSeconds: 1, spawnCount: 2, deathSpawnName: "Bats", deathSpawnCount: 1 },
       "Lava Hound": { deathSpawnName: "Lava Pup", deathSpawnCount: 6 },
       "Goblin Hut": { spawnName: "Spear Goblins", spawnEvery: 2, spawnCount: 1, deathSpawnName: "Spear Goblins", deathSpawnCount: 3, life: 11 },
@@ -2206,6 +2207,7 @@ Vines|藤蔓
     const ELIXIR_GOLEM_REWARD = 1;
     const ELIXIR_GOLEMITE_REWARD = 0.5;
     const ELIXIR_BLOB_REWARD = 0.5;
+    const CANNON_CART_BUILDING_SECONDS = 15;
     const lineSpells = {
       "The Log": { length: 10.1, width: 3.9, knock: 0.9, towerRatio: 0.15 },
       "Barbarian Barrel": { length: 4.5, width: 2.6, knock: 0.45, towerRatio: 0.20 }
@@ -2401,6 +2403,7 @@ Vines|藤蔓
       rows.push(["命中能力", hitRule(card)]);
       if (card.type === "Building") rows.push(["驻场时间", `${card.buildingLife} 回合`]);
       if (card.shieldHp > 0) rows.push(["护盾生命", individualShield(card)]);
+      if (card.name === "Cannon Cart") rows.push(["破盾形态", `变为原地建筑炮台，约 ${CANNON_CART_BUILDING_SECONDS} 秒后消失`]);
       if (card.spawnName) rows.push(["持续产出", spawnRuleText(card)]);
       if (card.deathSpawnCount > 0) rows.push(["死亡产出", `${card.deathSpawnCount} 个${cardName(card.deathSpawnName)}`]);
       return rows;
@@ -2493,6 +2496,8 @@ Vines|藤蔓
       if (card.name === "Golem") notes.push("戈仑石人死亡时造成范围爆炸并分裂成两个小戈仑；小戈仑死亡也会产生小范围爆炸。");
       if (card.name === "Elixir Golem") notes.push("圣水戈仑死亡时分裂成 2 个小圣水戈仑，并给予对手 1 点圣水；每个小圣水戈仑死亡后再分裂成 2 个圣水泡泡，并给予对手 0.5 点圣水；每个圣水泡泡死亡后再给予对手 0.5 点圣水，不再继续分裂。");
       if (card.name === "Giant Skeleton") notes.push("骷髅巨人死亡后留下 3 秒炸弹，在文字版里按当前圣水阶段换算成回合后爆炸。");
+      if (card.name === "Cannon Cart") notes.push(`加农炮战车护盾破碎后会脱轮变成原地建筑炮台，保留本体生命值，按约 ${CANNON_CART_BUILDING_SECONDS} 秒换算为当前阶段回合数后消失。`);
+      if (card.name === "Witch") notes.push("女巫会周期召唤骷髅兵；本平台按登场后约 1 秒先召唤，之后每约 7 秒召唤 4 个骷髅兵处理。");
       if (card.name === "Night Witch") notes.push("暗夜女巫会周期召唤蝙蝠，死亡时也会留下最后一只蝙蝠。");
       if (card.name === "Lava Hound") notes.push("熔岩猎犬本体只攻击建筑；死亡后分裂成 6 只小猎犬，小猎犬可以攻击普通单位和建筑。");
       if (card.name === "Mother Witch") notes.push("女巫婆婆击败敌方非建筑单位时，会把它们转化为己方的诅咒野猪；诅咒野猪只看建筑。");
@@ -2549,6 +2554,8 @@ Vines|藤蔓
       if (card.name === "Battle Healer") notes.push("战斗天使的登场治疗、攻击治疗、Hover 越河和不治疗建筑按官方卡牌说明与平衡资料换算；治疗数值显示为本平台实战结算值。");
       if (card.name === "Ice Golem") notes.push("戈仑冰人的死亡伤害和减速按官方死亡冰爆机制换算为小范围伤害与短时减速。");
       if (card.name === "Elixir Golem") notes.push("圣水戈仑的三段形态、2→4 分裂和给对手总计 4 点圣水的风险收益按官方机制做成本平台化结算。");
+      if (card.name === "Cannon Cart") notes.push(`加农炮战车按破盾后变成固定建筑炮台的机制处理，固定形态寿命以约 ${CANNON_CART_BUILDING_SECONDS} 秒换算为当前比赛阶段回合数。`);
+      if (card.name === "Witch") notes.push("女巫的骷髅召唤按公开卡牌资料中的 4 个骷髅、约 7 秒一轮处理，并保留登场后的首次快速召唤。");
       return notes;
     }
 
@@ -6630,6 +6637,23 @@ Vines|藤蔓
       return dealt;
     }
 
+    function transformCannonCart(unit) {
+      if (!unit || unit.name !== "Cannon Cart" || unit.type === "Building") return false;
+      unit.type = "Building";
+      unit.speed = 0;
+      unit.canJumpRiver = false;
+      unit.isBuildingTargeter = false;
+      unit.life = durationTurns(CANNON_CART_BUILDING_SECONDS);
+      unit.shield = 0;
+      unit.maxShield = 0;
+      unit.targetId = null;
+      unit.infernoTargetId = null;
+      unit.infernoCharge = 0;
+      normalizeRiverCell(unit);
+      log(`${sideName(unit.side)}的 ${cardName(unit.name)} 护盾破碎，脱轮变成原地建筑炮台，约 ${unit.life} 回合后消失。`);
+      return true;
+    }
+
     function damageUnit(unit, amount, options = {}) {
       if (!unit || unit.hp <= 0 || amount <= 0) return { hpDamage: 0, shieldDamage: 0 };
       if (unit.banditDashCharging) {
@@ -6651,7 +6675,7 @@ Vines|藤蔓
       if (unit.shield > 0) {
         const shieldDamage = Math.min(unit.shield, dealt);
         unit.shield = Math.max(0, unit.shield - dealt);
-        if (unit.shield === 0) log(`${sideName(unit.side)}的 ${cardName(unit.name)} 盾牌破碎。`);
+        if (unit.shield === 0 && !transformCannonCart(unit)) log(`${sideName(unit.side)}的 ${cardName(unit.name)} 盾牌破碎。`);
         return { hpDamage: 0, shieldDamage };
       }
       unit.hp -= dealt;
