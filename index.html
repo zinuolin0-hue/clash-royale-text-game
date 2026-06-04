@@ -384,9 +384,60 @@
 
     .mode-row {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 8px;
       margin-bottom: 12px;
+    }
+
+    .online-panel {
+      display: none;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(232, 241, 255, 0.72);
+    }
+
+    .online-panel.active {
+      display: grid;
+    }
+
+    .online-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .online-join {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    .online-join input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 10px;
+      background: #fff;
+      color: var(--ink);
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .room-code {
+      font-size: 24px;
+      font-weight: 900;
+      color: var(--blue);
+      letter-spacing: 0;
+    }
+
+    .online-status {
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 13px;
     }
 
     .editor-tabs {
@@ -437,7 +488,8 @@
       grid-template-columns: minmax(300px, 1.08fr) minmax(330px, 0.92fr);
     }
 
-    .battle-grid.duel {
+    .battle-grid.duel,
+    .battle-grid.online {
       grid-template-columns: minmax(250px, 0.74fr) minmax(420px, 1.24fr) minmax(250px, 0.74fr);
     }
 
@@ -460,15 +512,18 @@
       order: 2;
     }
 
-    .battle-grid.duel #playerControlPanel {
+    .battle-grid.duel #playerControlPanel,
+    .battle-grid.online #playerControlPanel {
       order: 1;
     }
 
-    .battle-grid.duel .arena-panel {
+    .battle-grid.duel .arena-panel,
+    .battle-grid.online .arena-panel {
       order: 2;
     }
 
-    .battle-grid.duel #enemyControlPanel {
+    .battle-grid.duel #enemyControlPanel,
+    .battle-grid.online #enemyControlPanel {
       order: 3;
     }
 
@@ -485,12 +540,15 @@
     }
 
     .battle-grid.duel .hand-grid,
+    .battle-grid.online .hand-grid,
     .battle-grid.demo .hand-grid,
-    .battle-grid.duel .placement-grid {
+    .battle-grid.duel .placement-grid,
+    .battle-grid.online .placement-grid {
       grid-template-columns: 1fr;
     }
 
     .battle-grid.duel .map,
+    .battle-grid.online .map,
     .battle-grid.demo .map {
       padding: 10px;
     }
@@ -911,8 +969,10 @@
       .battle-grid,
       .battle-grid.ai,
       .battle-grid.duel,
+      .battle-grid.online,
       .battle-grid.demo,
-      .battle-grid.touchdown {
+      .battle-grid.touchdown,
+      .battle-grid.online {
         grid-template-columns: 1fr;
       }
 
@@ -955,6 +1015,8 @@
 
       .filters,
       .mode-row,
+      .online-actions,
+      .online-join,
       .editor-tabs,
       .difficulty-row,
       .hand-grid,
@@ -1629,6 +1691,7 @@
             <div class="mode-row" id="modeRow">
               <button data-mode="ai">对战电脑</button>
               <button data-mode="duel">同屏双人</button>
+              <button data-mode="online">在线双人</button>
               <button data-mode="demo">演示模式</button>
               <button data-mode="touchdown">达阵模式</button>
             </div>
@@ -1639,6 +1702,20 @@
               <button data-difficulty="pharaoh">法老</button>
             </div>
             <div class="source-note" id="difficultyHint"></div>
+            <div class="online-panel" id="onlinePanel">
+              <div class="online-actions">
+                <button class="primary" id="createRoomBtn">创建房间</button>
+                <button class="secondary" id="disconnectRoomBtn">断开连接</button>
+              </div>
+              <div class="online-join">
+                <input id="roomCodeInput" inputmode="numeric" maxlength="6" placeholder="输入 6 位房间号">
+                <button class="secondary" id="joinRoomBtn">加入房间</button>
+              </div>
+              <div>
+                房间号：<span class="room-code" id="roomCodeDisplay">------</span>
+              </div>
+              <div class="online-status" id="onlineStatus">在线双人使用点对点连接：房主创建房间，另一台设备输入房间号加入。</div>
+            </div>
             <div class="editor-tabs" id="editorTabs">
               <button data-edit-side="player">编辑玩家A</button>
               <button data-edit-side="enemy">编辑玩家B</button>
@@ -1732,6 +1809,7 @@
     </div>
   </div>
 
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script>
     const CARD_TEXT = `
 Knight|3|common
@@ -2547,6 +2625,16 @@ Vines|藤蔓
     let boardActiveSide = "player";
     let recentRandomDecks = [];
     let autoTimer = null;
+    let online = {
+      role: null,
+      localSide: "player",
+      roomCode: "",
+      peer: null,
+      conn: null,
+      connected: false,
+      remoteDeck: [],
+      status: "在线双人使用点对点连接：房主创建房间，另一台设备输入房间号加入。"
+    };
     const DEMO_SPEEDS = [
       { label: "0.5x", delay: 1600 },
       { label: "0.75x", delay: 1100 },
@@ -2639,13 +2727,16 @@ Vines|藤蔓
     }
 
     function activeSetupDeck() {
+      if (gameMode === "online") return selectedDeck;
       return editingSide === "enemy" ? selectedEnemyHumanDeck : selectedDeck;
     }
 
     function setActiveSetupDeck(deck) {
-      if (editingSide === "enemy") selectedEnemyHumanDeck = deck;
+      if (gameMode === "online") selectedDeck = deck;
+      else if (editingSide === "enemy") selectedEnemyHumanDeck = deck;
       else selectedDeck = deck;
       saveSetup();
+      onlineSendDeck();
     }
 
     function saveSetup() {
@@ -2656,13 +2747,14 @@ Vines|藤蔓
     }
 
     function setupSideLabel(side) {
+      if (gameMode === "online") return side === "player" ? "玩家A" : "玩家B";
       if (gameMode === "demo") return side === "player" ? "电脑A" : "电脑B";
       if (side === "player") return gameMode === "duel" ? "玩家A" : "你";
       return gameMode === "duel" ? "玩家B" : "电脑";
     }
 
     function isSinglePlayerSetupMode() {
-      return gameMode === "ai" || gameMode === "touchdown";
+      return gameMode === "ai" || gameMode === "touchdown" || gameMode === "online";
     }
 
     function renderSetup() {
@@ -2692,15 +2784,19 @@ Vines|藤蔓
         `;
       }).join("");
 
-      const ready = isSinglePlayerSetupMode() ? selectedDeck.length === 8 : selectedDeck.length === 8 && selectedEnemyHumanDeck.length === 8;
-      el("deckPanelTitle").textContent = isSinglePlayerSetupMode() ? "你的 8 张卡" : `${setupSideLabel(editingSide)}的 8 张卡`;
+      const onlineReady = gameMode === "online" && online.connected && selectedDeck.length === 8 && online.remoteDeck.length === 8 && online.role === "host";
+      const ready = gameMode === "online" ? onlineReady : isSinglePlayerSetupMode() ? selectedDeck.length === 8 : selectedDeck.length === 8 && selectedEnemyHumanDeck.length === 8;
+      el("deckPanelTitle").textContent = gameMode === "online" ? "你的在线卡组" : isSinglePlayerSetupMode() ? "你的 8 张卡" : `${setupSideLabel(editingSide)}的 8 张卡`;
       el("deckCount").textContent = `${deck.length} / 8`;
       el("startBtn").disabled = !ready;
-      el("startBtn").textContent = gameMode === "ai" ? "开始人机对战" : gameMode === "demo" ? "开始电脑演示" : gameMode === "touchdown" ? "开始达阵模式" : "开始同屏双人对战";
+      el("startBtn").textContent = gameMode === "ai" ? "开始人机对战" : gameMode === "demo" ? "开始电脑演示" : gameMode === "touchdown" ? "开始达阵模式" : gameMode === "online" ? (online.role === "guest" ? "等待房主开始" : "开始在线对战") : "开始同屏双人对战";
       el("editorTabs").style.display = isSinglePlayerSetupMode() ? "none" : "grid";
       el("difficultyRow").style.display = gameMode === "ai" ? "grid" : "none";
       el("difficultyHint").style.display = gameMode === "ai" ? "block" : "none";
       el("difficultyHint").textContent = gameMode === "ai" ? AI_DIFFICULTIES[aiDifficulty].hint : "";
+      el("onlinePanel").classList.toggle("active", gameMode === "online");
+      el("roomCodeDisplay").textContent = online.roomCode || "------";
+      el("onlineStatus").textContent = onlineStatusText();
       el("difficultyRow").querySelectorAll("[data-difficulty]").forEach(btn => {
         btn.classList.toggle("active", btn.dataset.difficulty === aiDifficulty);
       });
@@ -2731,10 +2827,289 @@ Vines|藤蔓
       }).join("");
       el("topPills").innerHTML = `
         <span class="pill">完整基础卡池：${CARDS.length} 张</span>
-        <span class="pill">${isSinglePlayerSetupMode() ? (gameMode === "touchdown" ? "达阵：先赢 3 局" : `电脑难度：${AI_DIFFICULTIES[aiDifficulty].label} · 热门卡组：${META_DECKS.length} 套`) : `${setupSideLabel("player")}：${selectedDeck.length}/8 · ${setupSideLabel("enemy")}：${selectedEnemyHumanDeck.length}/8`}</span>
-        <span class="pill">离线单文件</span>
+        <span class="pill">${gameMode === "online" ? `在线：你 ${selectedDeck.length}/8 · 对方 ${online.remoteDeck.length}/8` : isSinglePlayerSetupMode() ? (gameMode === "touchdown" ? "达阵：先赢 3 局" : `电脑难度：${AI_DIFFICULTIES[aiDifficulty].label} · 热门卡组：${META_DECKS.length} 套`) : `${setupSideLabel("player")}：${selectedDeck.length}/8 · ${setupSideLabel("enemy")}：${selectedEnemyHumanDeck.length}/8`}</span>
+        <span class="pill">${gameMode === "online" ? (online.connected ? "在线已连接" : "等待在线连接") : "离线单文件"}</span>
       `;
       renderCardDetail();
+    }
+
+    function onlineStatusText() {
+      if (gameMode !== "online") return "";
+      const role = online.role === "host" ? "房主 / 玩家A" : online.role === "guest" ? "加入方 / 玩家B" : "未连接";
+      const room = online.roomCode ? `房间 ${online.roomCode}` : "尚未创建或加入房间";
+      const connection = online.connected ? "已连接" : online.roomCode ? "等待连接" : "未连接";
+      return `${online.status} · ${role} · ${room} · ${connection} · 你 ${selectedDeck.length}/8，对方 ${online.remoteDeck.length}/8`;
+    }
+
+    function setOnlineStatus(text) {
+      online.status = text;
+      updateOnlinePanel();
+    }
+
+    function updateOnlinePanel() {
+      const panel = el("onlinePanel");
+      if (!panel) return;
+      el("roomCodeDisplay").textContent = online.roomCode || "------";
+      el("onlineStatus").textContent = onlineStatusText();
+    }
+
+    function ensurePeerJs() {
+      if (window.Peer) return true;
+      setOnlineStatus("在线连接库没有加载成功。请确认当前设备可以访问互联网，然后刷新页面再试。");
+      return false;
+    }
+
+    function generateRoomCode() {
+      return String(Math.floor(100000 + Math.random() * 900000));
+    }
+
+    function cleanRoomCode(value) {
+      return String(value || "").replace(/\D/g, "").slice(0, 6);
+    }
+
+    function onlinePeerId(code) {
+      return `text-royale-room-${code}`;
+    }
+
+    function sanitizeDeck(deck) {
+      return (Array.isArray(deck) ? deck : []).filter(name => cardByName.has(name)).slice(0, 8);
+    }
+
+    function disconnectOnlineRoom(options = {}) {
+      const { silent = false } = options;
+      try {
+        if (online.conn) online.conn.close();
+      } catch {}
+      try {
+        if (online.peer) online.peer.destroy();
+      } catch {}
+      online = {
+        role: null,
+        localSide: "player",
+        roomCode: "",
+        peer: null,
+        conn: null,
+        connected: false,
+        remoteDeck: [],
+        status: silent ? online.status : "已断开在线连接。可以重新创建房间或输入房间号加入。"
+      };
+      if (!silent) renderSetup();
+    }
+
+    function createOnlineRoom() {
+      gameMode = "online";
+      editingSide = "player";
+      if (!ensurePeerJs()) return renderSetup();
+      disconnectOnlineRoom({ silent: true });
+      const code = generateRoomCode();
+      online = {
+        role: "host",
+        localSide: "player",
+        roomCode: code,
+        peer: null,
+        conn: null,
+        connected: false,
+        remoteDeck: [],
+        status: "正在创建房间。"
+      };
+      selectedEnemyHumanDeck = [];
+      const peer = new Peer(onlinePeerId(code), { debug: 1 });
+      online.peer = peer;
+      peer.on("open", () => {
+        setOnlineStatus("房间已创建。把房间号发给另一台设备，对方加入后就能开始。");
+        renderSetup();
+      });
+      peer.on("connection", conn => {
+        if (online.conn && online.conn.open) {
+          conn.close();
+          return;
+        }
+        setupOnlineConnection(conn);
+      });
+      peer.on("error", err => {
+        const detail = err?.type === "unavailable-id" ? "房间号被占用，请重新创建一次。" : (err?.message || err?.type || "未知错误");
+        setOnlineStatus(`连接错误：${detail}`);
+        renderSetup();
+      });
+      saveSetup();
+      renderSetup();
+    }
+
+    function joinOnlineRoom() {
+      const code = cleanRoomCode(el("roomCodeInput").value);
+      gameMode = "online";
+      editingSide = "player";
+      if (code.length !== 6) {
+        setOnlineStatus("请输入房主给你的 6 位房间号。");
+        renderSetup();
+        return;
+      }
+      if (!ensurePeerJs()) return renderSetup();
+      disconnectOnlineRoom({ silent: true });
+      online = {
+        role: "guest",
+        localSide: "enemy",
+        roomCode: code,
+        peer: null,
+        conn: null,
+        connected: false,
+        remoteDeck: [],
+        status: "正在加入房间。"
+      };
+      const peer = new Peer({ debug: 1 });
+      online.peer = peer;
+      peer.on("open", () => {
+        const conn = peer.connect(onlinePeerId(code), { reliable: true });
+        setupOnlineConnection(conn);
+      });
+      peer.on("error", err => {
+        setOnlineStatus(`连接错误：${err?.message || err?.type || "未知错误"}`);
+        renderSetup();
+      });
+      saveSetup();
+      renderSetup();
+    }
+
+    function setupOnlineConnection(conn) {
+      online.conn = conn;
+      conn.on("open", () => {
+        online.connected = true;
+        setOnlineStatus(online.role === "host" ? "对手已加入。双方都选满 8 张卡后，房主可以开始。" : "已加入房间。选满 8 张卡后等待房主开始。");
+        onlineSendDeck();
+        renderSetup();
+      });
+      conn.on("data", handleOnlineMessage);
+      conn.on("close", () => {
+        online.connected = false;
+        setOnlineStatus("对方连接已断开。当前战斗不会继续同步。");
+        renderSetup();
+      });
+      conn.on("error", err => {
+        online.connected = false;
+        setOnlineStatus(`连接错误：${err?.message || "未知错误"}`);
+        renderSetup();
+      });
+    }
+
+    function onlineSend(message) {
+      if (!online.conn || !online.conn.open) return false;
+      online.conn.send(message);
+      return true;
+    }
+
+    function onlineSendDeck() {
+      if (gameMode !== "online") return;
+      onlineSend({ type: "deck", deck: [...selectedDeck] });
+    }
+
+    function onlineSendAction(action) {
+      if (!onlineSend({ type: "action", action })) {
+        setOnlineStatus("行动没有发送成功：连接可能已经断开。");
+        renderBattle();
+      }
+    }
+
+    function cloneOnlineState() {
+      if (typeof structuredClone === "function") return structuredClone(state);
+      return JSON.parse(JSON.stringify(state));
+    }
+
+    function onlineSendState() {
+      if (!state || state.mode !== "online" || online.role !== "host") return;
+      onlineSend({ type: "state", state: cloneOnlineState() });
+    }
+
+    function handleOnlineMessage(message) {
+      if (!message || typeof message !== "object") return;
+      if (message.type === "deck") {
+        online.remoteDeck = sanitizeDeck(message.deck);
+        selectedEnemyHumanDeck = [...online.remoteDeck];
+        setOnlineStatus(online.connected ? "已收到对方卡组。双方都满 8 张卡后，房主可以开始。" : online.status);
+        renderSetup();
+        return;
+      }
+      if (message.type === "state") {
+        applyOnlineState(message.state);
+        return;
+      }
+      if (message.type === "action") {
+        applyOnlineRemoteAction(message.action);
+        return;
+      }
+      if (message.type === "status") {
+        setOnlineStatus(String(message.text || online.status));
+      }
+    }
+
+    function applyOnlineState(remoteState) {
+      if (online.role !== "guest" || !remoteState) return;
+      state = remoteState;
+      gameMode = "online";
+      selectedHandIndex = { player: null, enemy: null };
+      boardActiveSide = "enemy";
+      showScreen("battle");
+      renderBattle();
+      if (state.gameOver && state.result) {
+        el("resultTitle").textContent = state.result.title;
+        el("resultText").textContent = state.result.text;
+        el("resultModal").classList.add("active");
+      }
+    }
+
+    function serializeOnlinePlace(side, place) {
+      if (place.custom) {
+        const row = Math.round(side === "player" ? place.playerPos : place.enemyPos);
+        return { custom: true, lane: place.lane, row };
+      }
+      return { custom: false, id: place.id };
+    }
+
+    function deserializeOnlinePlace(side, payload) {
+      if (payload?.custom) return boardPlace(side, payload.lane, Number(payload.row));
+      return PLACEMENTS.find(place => place.id === payload?.id) || PLACEMENTS[0];
+    }
+
+    function applyOnlineRemoteAction(action) {
+      if (online.role !== "host" || !state || state.mode !== "online" || state.gameOver || !action) return;
+      const side = "enemy";
+      if (state.pendingActions[side] && action.kind !== "ability") return;
+      if (action.kind === "skip") {
+        selectedHandIndex[side] = null;
+        log(`${sideName(side)}选择存圣水，没有下牌。`);
+        submitAction(side);
+        renderBattle();
+        return;
+      }
+      if (action.kind === "ability") {
+        const unit = state.units.find(item => item.id === Number(action.unitId) && item.side === side && item.hp > 0);
+        if (!unit) return;
+        if (useChampionAbility(unit, side, "human")) {
+          cleanupUnits();
+          checkAllTowers();
+          state.mapMessage = `${sideName(side)}发动了 ${cardName(unit.name)} 的「${CHAMPION_ABILITIES[unit.name].label}」。`;
+          onlineSendState();
+          renderBattle();
+        }
+        return;
+      }
+      if (action.kind !== "play") return;
+      const handIndex = Number(action.handIndex);
+      if (!Number.isInteger(handIndex) || handIndex < 0 || handIndex > 3) return;
+      const card = hand(side)[handIndex];
+      if (!card) return;
+      const actual = playableCard(card, side);
+      const cost = card.name === "Mirror" ? currentCost(card, side) : actual.cost;
+      const key = elixirKey(side);
+      if (state[key] < cost) return;
+      const place = deserializeOnlinePlace(side, action.place);
+      state[key] -= cost;
+      const played = rotateCycle(side, handIndex);
+      const deployed = deployCard(side, played, place, actual);
+      if (played.name !== "Mirror" && deployed) state.enemyLast = deployed;
+      recordPlayedCard(side, deployed || played);
+      selectedHandIndex[side] = null;
+      submitAction(side);
+      renderBattle();
     }
 
     function toggleCard(name) {
@@ -3160,9 +3535,23 @@ Vines|藤蔓
     }
 
     function startBattle() {
+      if (gameMode === "online") {
+        if (online.role !== "host") {
+          setOnlineStatus("在线对战由房主开始。加入方选好卡组后等待房主点击开始。");
+          renderSetup();
+          return;
+        }
+        if (!online.connected || selectedDeck.length !== 8 || online.remoteDeck.length !== 8) {
+          setOnlineStatus("需要双方连接成功，并且两边都选满 8 张卡，才能开始在线对战。");
+          renderSetup();
+          return;
+        }
+      }
       const enemyDeck = gameMode === "ai" || gameMode === "touchdown"
         ? chooseComputerDeck()
-        : { name: gameMode === "demo" ? "电脑B自选卡组" : "玩家B自选卡组", source: gameMode === "demo" ? "电脑演示" : "本机双人", weight: 1, cards: selectedEnemyHumanDeck };
+        : gameMode === "online"
+          ? { name: "在线玩家B卡组", source: "在线房间", weight: 1, cards: online.remoteDeck }
+          : { name: gameMode === "demo" ? "电脑B自选卡组" : "玩家B自选卡组", source: gameMode === "demo" ? "电脑演示" : "本机双人", weight: 1, cards: selectedEnemyHumanDeck };
       const playerCards = selectedDeck.map(name => cardByName.get(name));
       const enemyCards = enemyDeck.cards.map(name => cardByName.get(name)).filter(Boolean);
       state = {
@@ -3226,11 +3615,15 @@ Vines|藤蔓
       } else if (gameMode === "demo") {
         state.mapMessage = "演示模式正在自动进行；可以暂停、加速或减速。";
         log(`演示模式开始：电脑A「${cardListText(selectedDeck)}」对战电脑B「${cardListText(enemyDeck.cards)}」。`);
+      } else if (gameMode === "online") {
+        state.mapMessage = "在线双人开始：房主是玩家A，加入方是玩家B。双方都提交行动后由房主结算。";
+        log(`在线双人开始：玩家A「${cardListText(selectedDeck)}」对战玩家B「${cardListText(enemyDeck.cards)}」。`);
       } else {
         log("同屏双人开始：玩家A对战玩家B。双方都提交行动后才会结算本回合。");
       }
       showScreen("battle");
       renderBattle();
+      if (gameMode === "online") onlineSendState();
       if (gameMode === "demo") startDemoLoop();
     }
 
@@ -3330,17 +3723,18 @@ Vines|藤蔓
       el("battleGrid").className = `battle-grid ${state.mode}`;
       el("timeHud").textContent = `${state.time} 秒`;
       el("phaseHud").textContent = `${phase.name} · 每回合 ${phase.seconds} 秒`;
-      el("playerElixirLabel").textContent = state.mode === "demo" ? "电脑A圣水" : state.mode === "duel" ? "玩家A圣水" : "你的圣水";
+      el("playerElixirLabel").textContent = state.mode === "demo" ? "电脑A圣水" : state.mode === "duel" || state.mode === "online" ? "玩家A圣水" : "你的圣水";
       el("playerElixirHud").textContent = `${state.playerElixir} / 10`;
-      el("enemyHudLabel").textContent = state.mode === "touchdown" ? "电脑圣水" : state.mode === "demo" ? "电脑B圣水" : state.mode === "duel" ? "玩家B圣水" : "电脑卡组";
-      el("enemyDeckHud").textContent = state.mode === "duel" || state.mode === "demo" || state.mode === "touchdown" ? `${state.enemyElixir} / 10` : state.selectedEnemyDeck.name;
+      el("enemyHudLabel").textContent = state.mode === "touchdown" ? "电脑圣水" : state.mode === "demo" ? "电脑B圣水" : state.mode === "duel" || state.mode === "online" ? "玩家B圣水" : "电脑卡组";
+      el("enemyDeckHud").textContent = state.mode === "duel" || state.mode === "demo" || state.mode === "touchdown" || state.mode === "online" ? `${state.enemyElixir} / 10` : state.selectedEnemyDeck.name;
       el("turnHud").textContent = `第 ${state.turn} 回合`;
-      el("playerControlTitle").textContent = state.mode === "demo" ? "电脑A手牌" : state.mode === "duel" ? "玩家A操作盘" : "出牌区";
-      el("enemyControlTitle").textContent = state.mode === "demo" ? "电脑B手牌" : "玩家B操作盘";
+      el("playerControlTitle").textContent = state.mode === "demo" ? "电脑A手牌" : state.mode === "duel" ? "玩家A操作盘" : state.mode === "online" ? `玩家A操作盘${online.localSide === "player" ? "（你）" : "（对方）"}` : "出牌区";
+      el("enemyControlTitle").textContent = state.mode === "demo" ? "电脑B手牌" : state.mode === "online" ? `玩家B操作盘${online.localSide === "enemy" ? "（你）" : "（对方）"}` : "玩家B操作盘";
       el("topPills").innerHTML = `
         <span class="pill">${state.mode === "touchdown" ? touchdownScoreLabel() : `当前规则：${state.time < SUDDEN_DEATH_START ? "国王塔决胜" : "一塔决胜"}`}</span>
         <span class="pill">场上单位：${state.units.length}</span>
-        <span class="pill">${state.mode === "ai" ? `电脑：${AI_DIFFICULTIES[state.aiDifficulty].label} · ${state.aiStrategy.name}${state.aiDifficulty === "pharaoh" && state.pharaohNote ? ` · ${state.pharaohNote}` : ""}` : state.mode === "touchdown" ? `电脑圣水：${state.enemyElixir} / 10` : state.mode === "demo" ? demoStatusLabel() : state.mode === "duel" ? pendingLabel() : `电脑圣水：${state.enemyElixir} / 10`}</span>
+        <span class="pill">${state.mode === "ai" ? `电脑：${AI_DIFFICULTIES[state.aiDifficulty].label} · ${state.aiStrategy.name}${state.aiDifficulty === "pharaoh" && state.pharaohNote ? ` · ${state.pharaohNote}` : ""}` : state.mode === "touchdown" ? `电脑圣水：${state.enemyElixir} / 10` : state.mode === "demo" ? demoStatusLabel() : state.mode === "duel" || state.mode === "online" ? pendingLabel() : `电脑圣水：${state.enemyElixir} / 10`}</span>
+        ${state.mode === "online" ? `<span class="pill">在线房间：${online.roomCode || "同步中"}</span>` : ""}
       `;
       renderTowers();
       renderControls("player");
@@ -3392,10 +3786,15 @@ Vines|藤蔓
     }
 
     function pendingLabel() {
-      if (state.mode !== "duel") return "";
-      const a = state.pendingActions.player ? "玩家A已提交" : "等待玩家A";
-      const b = state.pendingActions.enemy ? "玩家B已提交" : "等待玩家B";
+      if (state.mode !== "duel" && state.mode !== "online") return "";
+      const a = state.pendingActions.player ? `${sideName("player")}已提交` : `等待${sideName("player")}`;
+      const b = state.pendingActions.enemy ? `${sideName("enemy")}已提交` : `等待${sideName("enemy")}`;
       return `${a} · ${b}`;
+    }
+
+    function onlineControlHint(side, submitted) {
+      if (side !== online.localSide) return submitted ? "对方本回合已提交" : "等待对方操作";
+      return submitted ? "已提交，等待对方" : "本回合可以出一张牌或存圣水";
     }
 
     function demoStatusLabel() {
@@ -3422,12 +3821,12 @@ Vines|藤蔓
       el(`${side}SideStatus`).innerHTML = `
         <span>${sideName(side)}圣水</span>
         <strong>${elixir} / 10</strong>
-        <span>${state.mode === "touchdown" ? "越过对方底线即可拿下一局" : state.mode === "demo" ? demoStatusLabel() : state.mode === "duel" ? (submitted ? "等待对方提交" : "本回合可以出一张牌或存圣水") : `电脑圣水 ${state.enemyElixir} / 10`}</span>
+        <span>${state.mode === "touchdown" ? "越过对方底线即可拿下一局" : state.mode === "demo" ? demoStatusLabel() : state.mode === "duel" ? (submitted ? "等待对方提交" : "本回合可以出一张牌或存圣水") : state.mode === "online" ? onlineControlHint(side, submitted) : `电脑圣水 ${state.enemyElixir} / 10`}</span>
       `;
       el(`${side}HandGrid`).innerHTML = hand(side).map((card, index) => {
         const cost = currentCost(card, side);
         const shown = displayCard(card, side);
-        const canHumanAct = state.mode === "duel" || ((state.mode === "ai" || state.mode === "touchdown") && side === "player");
+        const canHumanAct = canControlSide(side);
         const affordable = elixir >= cost && !state.gameOver && !submitted && canHumanAct;
         return `
           <button class="hand-card ${selectedIndex === index ? "active" : ""}" data-side="${side}" data-hand="${index}" ${affordable ? "" : "disabled"}>
@@ -3445,7 +3844,7 @@ Vines|藤蔓
       el(`${side}PlacementGrid`).innerHTML = state.mode === "demo"
         ? ""
         : PLACEMENTS.map(place => {
-          let disabled = selectedIndex === null || state.gameOver || submitted || (state.mode !== "duel" && side !== "player");
+          let disabled = selectedIndex === null || state.gameOver || submitted || !canControlSide(side);
           if (!disabled) {
             const row = Math.round(side === "player" ? place.playerPos : place.enemyPos);
             disabled = !canPlaceAt(side, place.lane, row).ok;
@@ -3455,7 +3854,7 @@ Vines|藤蔓
       const skipBtn = el(`${side}SkipBtn`);
       if (skipBtn) {
         skipBtn.style.display = state.mode === "demo" ? "none" : "inline-flex";
-        skipBtn.disabled = state.gameOver || submitted || (state.mode !== "duel" && side !== "player");
+        skipBtn.disabled = state.gameOver || submitted || !canControlSide(side);
         skipBtn.textContent = `${sideName(side)}存圣水`;
       }
       el("autoBtn").style.display = state.mode === "ai" || state.mode === "demo" ? "inline-flex" : "none";
@@ -3472,7 +3871,7 @@ Vines|藤蔓
       return units.map(unit => {
         const ability = CHAMPION_ABILITIES[unit.name];
         const status = championAbilityStatus(unit, side);
-        const humanSide = state.mode === "duel" || ((state.mode === "ai" || state.mode === "touchdown") && side === "player");
+        const humanSide = canControlSide(side);
         const disabled = !humanSide || !status.ready;
         return `
           <button class="ability-button" data-ability-side="${side}" data-ability-id="${unit.id}" ${disabled ? "disabled" : ""}>
@@ -3513,14 +3912,20 @@ Vines|藤蔓
 
     function activateChampionAbilityById(side, id) {
       if (!state || state.gameOver) return;
-      const humanSide = state.mode === "duel" || ((state.mode === "ai" || state.mode === "touchdown") && side === "player");
-      if (!humanSide) return;
+      if (!canControlSide(side)) return;
+      if (state.mode === "online" && online.role === "guest") {
+        onlineSendAction({ kind: "ability", side, unitId: Number(id) });
+        state.mapMessage = "英雄技能请求已发送，等待房主同步。";
+        renderBattle();
+        return;
+      }
       const unit = state.units.find(item => item.id === Number(id) && item.side === side && item.hp > 0);
       if (!unit) return;
       if (useChampionAbility(unit, side, "human")) {
         cleanupUnits();
         checkAllTowers();
         state.mapMessage = `${sideName(side)}发动了 ${cardName(unit.name)} 的「${CHAMPION_ABILITIES[unit.name].label}」。`;
+        if (state.mode === "online" && online.role === "host") onlineSendState();
         renderBattle();
       }
     }
@@ -3778,7 +4183,7 @@ Vines|藤蔓
 
     function renderMap() {
       const rows = [];
-      const colWidth = state.mode === "duel" || state.mode === "touchdown" ? 10 : 12;
+      const colWidth = state.mode === "duel" || state.mode === "online" || state.mode === "touchdown" ? 10 : 12;
       const border = "─".repeat(colWidth);
       rows.push(`${"".padEnd(6)}${LANES.map(lane => fitText(lane.label, colWidth)).join("  ")}`);
       rows.push(`  ┌${LANES.map(() => border).join("┬")}┐`);
@@ -3801,9 +4206,9 @@ Vines|藤蔓
         ? "底=达阵底线 禁=中央禁区。没有塔、没有河、没有桥；双方只能在己方可下牌区部署。"
         : state.mode === "demo"
         ? "甲=电脑A 乙=电脑B 塔=防御塔 筑=建筑 空=空军。偏左格走左桥，偏右格走右桥。"
-        : state.mode === "duel"
-          ? "甲=玩家A 乙=玩家B 塔=防御塔 筑=建筑 空=空军。偏左格走左桥，偏右格走右桥。"
-          : `我=${sideName("player")} 敌=${sideName("enemy")} 塔=防御塔 筑=建筑 空=空军。偏左格走左桥，偏右格走右桥；普通地面单位只能走桥。`);
+          : state.mode === "duel" || state.mode === "online"
+            ? "甲=玩家A 乙=玩家B 塔=防御塔 筑=建筑 空=空军。偏左格走左桥，偏右格走右桥。"
+            : `我=${sideName("player")} 敌=${sideName("enemy")} 塔=防御塔 筑=建筑 空=空军。偏左格走左桥，偏右格走右桥；普通地面单位只能走桥。`);
       el("arenaMap").textContent = rows.join("\n");
       renderBoard();
       renderMapHint();
@@ -4069,7 +4474,7 @@ Vines|藤蔓
     }
 
     function mapSide(side) {
-      if (state.mode === "duel" || state.mode === "demo") return side === "player" ? "甲" : "乙";
+      if (state.mode === "duel" || state.mode === "online" || state.mode === "demo") return side === "player" ? "甲" : "乙";
       return side === "player" ? "我" : "敌";
     }
 
@@ -4117,8 +4522,16 @@ Vines|藤蔓
       state.log.unshift(`T${state.turn} · ${text}`);
     }
 
+    function canControlSide(side) {
+      if (!state || state.gameOver) return false;
+      if (state.mode === "duel") return true;
+      if (state.mode === "online") return online.connected && side === online.localSide;
+      return (state.mode === "ai" || state.mode === "touchdown") && side === "player";
+    }
+
     function selectHand(side, index) {
       if (state.mode === "demo") return;
+      if (!canControlSide(side)) return;
       if (state.pendingActions[side]) return;
       const card = hand(side)[index];
       if (!card || state[elixirKey(side)] < currentCost(card, side)) return;
@@ -4136,7 +4549,7 @@ Vines|藤蔓
 
     function commitSelectedCard(side, place) {
       if (selectedHandIndex[side] === null || state.gameOver || state.pendingActions[side]) return;
-      if (state.mode !== "duel" && side !== "player") return;
+      if (!canControlSide(side)) return;
       const card = hand(side)[selectedHandIndex[side]];
       const pos = side === "player" ? place.playerPos : place.enemyPos;
       const legal = canPlaceAt(side, place.lane, Math.round(pos));
@@ -4149,6 +4562,14 @@ Vines|藤蔓
       const cost = card.name === "Mirror" ? currentCost(card, side) : actual.cost;
       const key = elixirKey(side);
       if (state[key] < cost) return;
+      if (state.mode === "online" && online.role === "guest") {
+        onlineSendAction({ kind: "play", side, handIndex: selectedHandIndex[side], place: serializeOnlinePlace(side, place) });
+        state.pendingActions[side] = true;
+        selectedHandIndex[side] = null;
+        state.mapMessage = "已提交本回合行动，等待房主结算。";
+        renderBattle();
+        return;
+      }
       state[key] -= cost;
       const played = rotateCycle(side, selectedHandIndex[side]);
       const deployed = deployCard(side, played, place, actual);
@@ -4165,7 +4586,15 @@ Vines|藤蔓
 
     function skipTurn(side = "player") {
       if (state.gameOver || state.pendingActions[side]) return;
-      if (state.mode !== "duel" && side !== "player") return;
+      if (!canControlSide(side)) return;
+      if (state.mode === "online" && online.role === "guest") {
+        onlineSendAction({ kind: "skip", side });
+        state.pendingActions[side] = true;
+        selectedHandIndex[side] = null;
+        state.mapMessage = "已选择存圣水，等待房主结算。";
+        renderBattle();
+        return;
+      }
       selectedHandIndex[side] = null;
       log(`${sideName(side)}选择存圣水，没有下牌。`);
       submitAction(side);
@@ -4194,7 +4623,7 @@ Vines|藤蔓
       return Boolean(
         state &&
         !state.gameOver &&
-        (state.mode === "duel" || ((state.mode === "ai" || state.mode === "touchdown") && side === "player")) &&
+        canControlSide(side) &&
         !state.pendingActions[side] &&
         selectedHandIndex[side] !== null
       );
@@ -4297,6 +4726,7 @@ Vines|藤蔓
         advanceClock();
         state.pendingActions = { player: false, enemy: false };
       }
+      if (state.mode === "online" && online.role === "host") onlineSendState();
     }
 
     function mirroredCard(card, side) {
@@ -4383,7 +4813,7 @@ Vines|藤蔓
 
     function sideName(side) {
       if (state && state.mode === "demo") return side === "player" ? "电脑A" : "电脑B";
-      if (state && state.mode === "duel") return side === "player" ? "玩家A" : "玩家B";
+      if (state && (state.mode === "duel" || state.mode === "online")) return side === "player" ? "玩家A" : "玩家B";
       return side === "player" ? "你" : "电脑";
     }
 
@@ -6638,14 +7068,18 @@ Vines|藤蔓
       state.gameOver = true;
       stopAuto();
       const playerWon = winner === "player";
-      const namedMode = state.mode === "duel" || state.mode === "demo";
-      el("resultTitle").textContent = namedMode ? `${sideName(winner)}胜利` : (playerWon ? "胜利" : "失败");
-      el("resultText").textContent = state.mode === "touchdown"
+      const namedMode = state.mode === "duel" || state.mode === "demo" || state.mode === "online";
+      const title = namedMode ? `${sideName(winner)}胜利` : (playerWon ? "胜利" : "失败");
+      const text = state.mode === "touchdown"
         ? `${reason} 用时 ${state.time} 秒，回合数 ${state.turn}。比分：${sideName("player")} ${state.touchdown.playerScore} : ${state.touchdown.enemyScore} ${sideName("enemy")}。`
         : namedMode
         ? `${reason} 用时 ${state.time} 秒，回合数 ${state.turn}。`
         : `${reason} 用时 ${state.time} 秒，回合数 ${state.turn}。电脑卡组：${state.selectedEnemyDeck.name}。`;
+      state.result = { title, text, winner, reason };
+      el("resultTitle").textContent = title;
+      el("resultText").textContent = text;
       el("resultModal").classList.add("active");
+      if (state.mode === "online" && online.role === "host") onlineSendState();
     }
 
     function stopAuto() {
@@ -6733,6 +7167,7 @@ Vines|藤蔓
       if (!btn) return;
       gameMode = btn.dataset.mode;
       if (isSinglePlayerSetupMode()) editingSide = "player";
+      if (gameMode === "online") setOnlineStatus("在线双人使用点对点连接：房主创建房间，另一台设备输入房间号加入。");
       saveSetup();
       renderSetup();
     });
@@ -6782,6 +7217,12 @@ Vines|藤蔓
       el(id).addEventListener("input", renderSetup);
       el(id).addEventListener("change", renderSetup);
     });
+    el("roomCodeInput").addEventListener("input", event => {
+      event.target.value = cleanRoomCode(event.target.value);
+    });
+    el("createRoomBtn").addEventListener("click", createOnlineRoom);
+    el("joinRoomBtn").addEventListener("click", joinOnlineRoom);
+    el("disconnectRoomBtn").addEventListener("click", () => disconnectOnlineRoom());
     el("startBtn").addEventListener("click", startBattle);
     el("randomBtn").addEventListener("click", randomBalancedDeck);
     el("clearBtn").addEventListener("click", () => {
@@ -6822,7 +7263,7 @@ Vines|藤蔓
     }
     {
       const savedMode = localStorage.getItem("textRoyaleMode");
-      gameMode = savedMode === "duel" || savedMode === "demo" || savedMode === "touchdown" ? savedMode : "ai";
+      gameMode = savedMode === "duel" || savedMode === "demo" || savedMode === "touchdown" || savedMode === "online" ? savedMode : "ai";
     }
     {
       const savedDifficulty = localStorage.getItem("textRoyaleDifficulty");
