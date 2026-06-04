@@ -1377,6 +1377,7 @@ Vines|藤蔓
     const riverJumpers = set(["Hog Rider", "Royal Hogs", "Prince", "Dark Prince", "Ram Rider", "Cursed Hog"]);
     const diesOnAttackNames = set(["Ice Spirit", "Fire Spirit", "Electro Spirit", "Heal Spirit", "Skeleton Barrel", "Battle Ram", "Suspicious Bush", "Wall Breakers"]);
     const ownHalfOnlySpells = set(["The Log", "Barbarian Barrel", "Royal Delivery"]);
+    const fullArenaDeployCards = set(["Goblin Drill"]);
     const spellAreas = {
       "Fireball": { radius: 2.5, towerRatio: 0.30, knock: 0.45 },
       "Rocket": { radius: 2.0, towerRatio: 0.25 },
@@ -1471,6 +1472,7 @@ Vines|藤蔓
         if (lineSpells[card.name]) badges.push("路径伤害");
         return badges;
       }
+      if (fullArenaDeployCards.has(card.name)) return ["全场部署", "建筑", `定时出${cardName(card.spawnName)}`, `破裂出${cardName(card.deathSpawnName)}`];
       const badges = [];
       if (card.type === "Building") {
         badges.push(card.attacks ? "攻击建筑" : "无攻击建筑");
@@ -3189,6 +3191,7 @@ Vines|藤蔓
         }
         return { ok: true };
       }
+      if (fullArenaDeployCards.has(card.name)) return { ok: true };
       if (card.type === "Spell") {
         if (!ownHalfOnlySpells.has(card.name) || onOwnHalf) return { ok: true };
         return { ok: false, reason: `${card.zh}只能放在${sideName(side)}的己方半场。` };
@@ -4853,6 +4856,23 @@ Vines|藤蔓
     }
 
     function releaseBuildingPayload(unit) {
+      if (unit.name === "Bomb Tower" && !unit.buildingPayloadReleased) {
+        unit.buildingPayloadReleased = true;
+        const fuse = deathBombTurns(3);
+        state.pendingExplosions.push({
+          side: unit.side,
+          lane: unit.lane,
+          pos: clampPos(unit.pos),
+          fuse,
+          damage: 285,
+          towerDamage: 86,
+          radius: 2.45,
+          knock: 0.35,
+          label: `${cardName(unit.name)}死亡炸弹`,
+          short: "炸塔"
+        });
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 留下死亡炸弹，约 ${fuse} 回合后爆炸。`;
+      }
       if (unit.buildingPayloadReleased || !unit.deathSpawnName || unit.deathSpawnCount <= 0) return "";
       unit.buildingPayloadReleased = true;
       for (let i = 0; i < unit.deathSpawnCount; i++) {
@@ -4966,6 +4986,7 @@ Vines|藤蔓
     function blockedByRiverCell(unit, lane = unit.lane, pos = unit.pos) {
       if (!state || state.mode === "touchdown") return false;
       if (Math.round(pos) !== 10 || !isRiverLane(lane)) return false;
+      if (fullArenaDeployCards.has(unit.name)) return false;
       return unit.type === "Building" || (!unit.isAir && !unit.canJumpRiver);
     }
 
