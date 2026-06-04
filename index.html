@@ -1884,7 +1884,7 @@ Suspicious Bush|可疑草丛
 Goblinstein|哥布林斯坦
 Rune Giant|符文巨人
 Berserker|狂战士
-Boss Bandit|刺客首领
+Boss Bandit|刺客头领
 Guardienne|守卫女武神
 Cannon|加农炮
 Goblin Hut|哥布林小屋
@@ -2053,6 +2053,11 @@ Vines|藤蔓
       "The Log": { length: 10.1, width: 3.9, knock: 0.9, towerRatio: 0.15 },
       "Barbarian Barrel": { length: 4.5, width: 2.6, knock: 0.45, towerRatio: 0.20 }
     };
+    const banditDashProfiles = {
+      "Bandit": { min: 3.5, max: 6.0, damageScale: 1.36, minDamage: 390, towerRatio: 0.45, landingGap: 0.45 },
+      "Boss Bandit": { min: 3.5, max: 6.0, damageScale: 1.35, minDamage: 650, towerRatio: 0.45, landingGap: 0.55 }
+    };
+    const banditDashCards = set(Object.keys(banditDashProfiles));
 
     const rarityBonus = { common: 0, rare: 35, epic: 75, legendary: 115, champion: 145 };
     const countMap = {
@@ -2258,6 +2263,7 @@ Vines|藤蔓
     function targetRule(card) {
       if (!card.attacks) return "不主动攻击";
       if (card.name === "Goblin Machine") return "近战手臂打地面；导弹预瞄远处目标";
+      if (banditDashCards.has(card.name)) return "近战打地面；前方 3.5 到 6 格可进入冲刺";
       return card.isBuildingTargeter ? "只锁定建筑" : "优先附近敌方单位或建筑";
     }
 
@@ -2298,6 +2304,7 @@ Vines|藤蔓
       if (card.name === "Bomb Tower") notes.push("炸弹塔消失或被摧毁后会留下 3 秒死亡炸弹，在文字版里换算为当前阶段回合数后爆炸。");
       if (card.name === "Goblin Drill") notes.push("哥布林钻机是全场部署建筑，可钻到敌方半场或中线位置，并持续产出哥布林；破裂后再放出哥布林。");
       if (card.name === "Goblin Machine") notes.push("哥布林机甲的普通手臂是近战地面攻击；火箭发射器会预瞄 2.5 到 5 格内的空中或地面目标当前位置，下回合落点爆炸，目标离开落点就会落空。");
+      if (banditDashCards.has(card.name)) notes.push("前方 3.5 到 6 格有可攻击的地面单位或防御塔、且身边没有近战目标时，会先进入“冲刺”状态；冲刺准备阶段不会受到伤害，下一次行动会冲到目标面前并造成冲撞伤害。");
       if (card.name === "Elixir Collector") notes.push("圣水收集器不攻击，每隔数回合为己方额外生成圣水。");
       if (card.spawnName && card.type !== "Building") notes.push(`存活期间会${spawnRuleText(card)}。`);
       if (card.deathSpawnCount > 0 && !["Goblin Drill", "Bomb Tower"].includes(card.name)) notes.push(`死亡或破裂时会释放 ${card.deathSpawnCount} 个${cardName(card.deathSpawnName)}。`);
@@ -3803,6 +3810,7 @@ Vines|藤蔓
 
     function unitStateMark(unit) {
       if (unit.type === "Building") return "筑";
+      if (unit.banditDashCharging) return "冲";
       if (unit.cloaked > 0 || unit.banditStealth > 0) return "隐";
       if (unit.monkProtection > 0) return "护";
       if (unit.goblinsteinLink > 0) return "链";
@@ -3834,6 +3842,7 @@ Vines|藤蔓
       });
       state.effects.forEach(effect => {
         if (effect.kind === "beam" && beamCoversCell(effect, row, lane)) details.push("地狱塔/地狱飞龙一类的持续锁定光线经过这里");
+        if (effect.kind === "dash" && beamCoversCell(effect, row, lane)) details.push(`${effect.label || "冲刺路线"}经过这里`);
         if (effect.kind === "blast" && blastCoversCell(effect, row, lane)) details.push(`${effect.label || "爆炸"}的范围覆盖这里`);
       });
       (state.pendingExplosions || []).forEach(bomb => {
@@ -3856,6 +3865,7 @@ Vines|藤蔓
       if (unit.type === "Building") states.push("建筑");
       if (unit.isAir) states.push("空中");
       else states.push("地面");
+      if (unit.banditDashCharging) states.push("冲刺准备/免伤");
       if (unit.cloaked > 0 || unit.banditStealth > 0) states.push("隐身");
       if (unit.monkProtection > 0) states.push("护体");
       if (unit.goblinsteinLink > 0) states.push("电链");
@@ -3887,12 +3897,16 @@ Vines|藤蔓
         const displayLane = unitDisplayLane(unit);
         if (Math.round(unit.pos) === row && laneOccupiesCell(displayLane, lane) && unit.hp > 0) {
           const kind = unitStateMark(unit);
-          parts.push({ className: unit.side, text: `${mapSide(unit.side)}${kind}:${cardName(unit.name)}` });
+          const name = unit.banditDashCharging ? `${cardName(unit.name)}(冲刺)` : cardName(unit.name);
+          parts.push({ className: unit.side, text: `${mapSide(unit.side)}${kind}:${name}` });
         }
       });
       state.effects.forEach(effect => {
         if (effect.kind === "beam" && beamCoversCell(effect, row, lane)) {
           parts.push({ className: "beam", text: "线:地狱" });
+        }
+        if (effect.kind === "dash" && beamCoversCell(effect, row, lane)) {
+          parts.push({ className: "beam", text: `冲:${effect.short || "刺"}` });
         }
         if (effect.kind === "blast" && blastCoversCell(effect, row, lane)) {
           parts.push({ className: "beam", text: `爆:${effect.short || "炸"}` });
@@ -4275,6 +4289,8 @@ Vines|藤蔓
         monkProtection: 0,
         goblinsteinLink: 0,
         banditStealth: 0,
+        banditDashCharging: false,
+        banditDashDodgedTurn: 0,
         abilityCooldown: 0,
         missileCooldown: card.name === "Goblin Machine" ? 0 : 0,
         abilityUses: 0,
@@ -5410,6 +5426,7 @@ Vines|藤蔓
       const acting = shuffle(state.units.filter(unit => unit.hp > 0));
       acting.forEach(unit => {
         if (unit.hp <= 0 || unit.frozen > 0 || !unit.attacks) return;
+        if (resolveBanditDash(unit)) return;
         if (unit.name === "Goblin Machine") launchGoblinMachineMissile(unit);
         const target = findTarget(unit);
         if (!target) return;
@@ -5420,6 +5437,89 @@ Vines|藤蔓
         const damage = attackDamage(unit, target);
         dealDamage(unit, target, damage);
       });
+    }
+
+    function resolveBanditDash(unit) {
+      if (!unit.banditDashCharging || !banditDashCards.has(unit.name)) return false;
+      const target = findBanditDashTarget(unit);
+      unit.banditDashCharging = false;
+      unit.banditDashDodgedTurn = 0;
+      if (!target) {
+        log(`${sideName(unit.side)}的 ${cardName(unit.name)} 没有找到可冲刺目标，停止冲刺准备。`);
+        return false;
+      }
+      const cfg = banditDashProfiles[unit.name];
+      const landing = banditLandingPos(unit, target, cfg);
+      const fromLane = unit.lane;
+      const fromPos = unit.pos;
+      unit.lane = target.lane;
+      moveUnitTo(unit, landing);
+      const damage = banditDashDamage(unit, cfg);
+      state.effects.push({ kind: "dash", fromLane, fromPos, toLane: target.lane, toPos: target.pos, label: `${cardName(unit.name)}冲刺路线`, short: "刺" });
+      if (target.kind === "tower") {
+        damageTower(target.target, target.target.side, Math.round(damage * cfg.towerRatio), `${cardName(unit.name)} 冲刺`);
+      } else {
+        damageUnit(target.target, damage, { attacker: unit });
+        unit.targetId = target.target.hp > 0 ? target.target.id : null;
+      }
+      log(`${sideName(unit.side)}的 ${cardName(unit.name)} 冲到${target.label}面前，造成 ${target.kind === "tower" ? Math.round(damage * cfg.towerRatio) : damage} 点冲撞伤害。`);
+      return true;
+    }
+
+    function banditDashDamage(unit, cfg) {
+      return Math.max(cfg.minDamage, Math.round(unit.damage * cfg.damageScale * (unit.rage > 0 ? 1.25 : 1)));
+    }
+
+    function banditLandingPos(unit, target, cfg) {
+      const dir = unit.side === "player" ? 1 : -1;
+      return clampPos(target.pos + dir * cfg.landingGap);
+    }
+
+    function prepareBanditDash(unit) {
+      if (!banditDashCards.has(unit.name) || unit.banditDashCharging || unit.frozen > 0 || unit.rooted > 0) return false;
+      const target = findBanditDashTarget(unit);
+      if (!target) return false;
+      unit.banditDashCharging = true;
+      unit.targetId = target.kind === "unit" ? target.target.id : null;
+      state.effects.push({ kind: "dash", fromLane: unit.lane, fromPos: unit.pos, toLane: target.lane, toPos: target.pos, label: `${cardName(unit.name)}正在准备冲刺`, short: "刺" });
+      state.mapMessage = `${sideName(unit.side)}的 ${cardName(unit.name)}进入冲刺准备，准备阶段不会受到伤害。`;
+      log(`${sideName(unit.side)}的 ${cardName(unit.name)}面前没有近战目标，锁定${target.label}并进入冲刺准备。`);
+      return true;
+    }
+
+    function findBanditDashTarget(unit) {
+      const cfg = banditDashProfiles[unit.name];
+      if (!cfg) return null;
+      const enemy = unit.side === "player" ? "enemy" : "player";
+      const units = state.units
+        .filter(target => target.side === enemy && target.hp > 0 && canUnitTarget(unit, target) && banditTargetAhead(unit, target))
+        .map(target => ({
+          kind: "unit",
+          target,
+          lane: target.lane,
+          pos: target.pos,
+          hp: target.hp,
+          label: `${sideName(target.side)}的${cardName(target.name)}`,
+          dist: distance(unit, target)
+        }));
+      const towers = state.mode === "touchdown" ? [] : Object.values(state.towers[enemy])
+        .filter(towerObj => towerObj.hp > 0 && banditTargetAhead(unit, towerObj))
+        .map(towerObj => ({
+          kind: "tower",
+          target: towerObj,
+          lane: towerObj.lane,
+          pos: towerObj.pos,
+          hp: towerObj.hp,
+          label: `${sideName(towerObj.side)}的${towerDisplayName(towerObj)}`,
+          dist: distance(unit, towerObj) + 0.25
+        }));
+      return [...units, ...towers]
+        .filter(target => laneCompatible(unit.lane, target.lane) && target.dist >= cfg.min && target.dist <= cfg.max)
+        .sort((a, b) => a.dist - b.dist || a.hp - b.hp)[0] || null;
+    }
+
+    function banditTargetAhead(unit, target) {
+      return unit.side === "player" ? target.pos < unit.pos : target.pos > unit.pos;
     }
 
     function launchGoblinMachineMissile(unit) {
@@ -5605,6 +5705,13 @@ Vines|藤蔓
 
     function damageUnit(unit, amount, options = {}) {
       if (!unit || unit.hp <= 0 || amount <= 0) return { hpDamage: 0, shieldDamage: 0 };
+      if (unit.banditDashCharging) {
+        if (state && unit.banditDashDodgedTurn !== state.turn) {
+          unit.banditDashDodgedTurn = state.turn;
+          log(`${sideName(unit.side)}的 ${cardName(unit.name)}正在冲刺准备，躲过了本回合伤害。`);
+        }
+        return { hpDamage: 0, shieldDamage: 0 };
+      }
       let dealt = Math.max(1, Math.round(amount));
       if (unit.monkProtection > 0) {
         const incoming = dealt;
@@ -5841,7 +5948,9 @@ Vines|藤蔓
     function moveUnits() {
       state.units.forEach(unit => {
         if (unit.hp <= 0 || unit.type === "Building" || unit.frozen > 0 || unit.rooted > 0) return;
+        if (unit.banditDashCharging) return;
         if (findTarget(unit)) return;
+        if (prepareBanditDash(unit)) return;
         const chase = findChaseTarget(unit);
         if (chase) {
           moveTowardTarget(unit, chase);
