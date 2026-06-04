@@ -1809,7 +1809,7 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
   <script>
     const CARD_TEXT = `
 Knight|3|common
@@ -2631,6 +2631,7 @@ Vines|藤蔓
       roomCode: "",
       peer: null,
       conn: null,
+      peerOpen: false,
       connected: false,
       remoteDeck: [],
       status: "在线双人使用点对点连接：房主创建房间，另一台设备输入房间号加入。"
@@ -2828,7 +2829,7 @@ Vines|藤蔓
       el("topPills").innerHTML = `
         <span class="pill">完整基础卡池：${CARDS.length} 张</span>
         <span class="pill">${gameMode === "online" ? `在线：你 ${selectedDeck.length}/8 · 对方 ${online.remoteDeck.length}/8` : isSinglePlayerSetupMode() ? (gameMode === "touchdown" ? "达阵：先赢 3 局" : `电脑难度：${AI_DIFFICULTIES[aiDifficulty].label} · 热门卡组：${META_DECKS.length} 套`) : `${setupSideLabel("player")}：${selectedDeck.length}/8 · ${setupSideLabel("enemy")}：${selectedEnemyHumanDeck.length}/8`}</span>
-        <span class="pill">${gameMode === "online" ? (online.connected ? "在线已连接" : "等待在线连接") : "离线单文件"}</span>
+        <span class="pill">${gameMode === "online" ? onlineConnectionPill() : "离线单文件"}</span>
       `;
       renderCardDetail();
     }
@@ -2837,7 +2838,15 @@ Vines|藤蔓
       if (gameMode !== "online") return "";
       const role = online.role === "host" ? "房主 / 玩家A" : online.role === "guest" ? "加入方 / 玩家B" : "未连接";
       const room = online.roomCode ? `房间 ${online.roomCode}` : "尚未创建或加入房间";
-      const connection = online.connected ? "已连接" : online.roomCode ? "等待连接" : "未连接";
+      const connection = online.connected
+        ? "双方已连接"
+        : online.role === "host" && online.peerOpen
+          ? "房主已进入，等待对手"
+          : online.role === "guest" && online.peerOpen
+            ? "正在连接房主"
+            : online.roomCode
+              ? "正在连接大厅"
+              : "未连接";
       return `${online.status} · ${role} · ${room} · ${connection} · 你 ${selectedDeck.length}/8，对方 ${online.remoteDeck.length}/8`;
     }
 
@@ -2871,6 +2880,51 @@ Vines|藤蔓
       return `text-royale-room-${code}`;
     }
 
+    function peerOptions() {
+      return {
+        host: "0.peerjs.com",
+        port: 443,
+        path: "/",
+        secure: true,
+        key: "peerjs",
+        debug: 1,
+        config: {
+          iceServers: [
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:global.stun.twilio.com:3478" }
+          ]
+        }
+      };
+    }
+
+    function onlineConnectionPill() {
+      if (online.connected) return "双方已连接";
+      if (online.role === "host" && online.peerOpen) return "房主已进入房间";
+      if (online.role === "guest" && online.peerOpen) return "正在连接房主";
+      if (online.roomCode) return "正在连接大厅";
+      return "等待在线连接";
+    }
+
+    function describePeerError(err) {
+      const type = err?.type || "";
+      const message = err?.message || "";
+      const raw = message || type || "未知错误";
+      const map = {
+        "browser-incompatible": "当前浏览器不支持点对点连接，请换 Chrome、Safari 或 Edge 最新版。",
+        "disconnected": "已从房间服务器断开，请重新创建或加入房间。",
+        "invalid-id": "房间号格式无效，请重新创建房间。",
+        "invalid-key": "点对点大厅服务暂时不可用，请稍后再试。",
+        "network": "网络无法连接到点对点大厅。请确认两台设备都能访问互联网，并刷新页面重试。",
+        "peer-unavailable": "没有找到这个房间。请确认房主页面仍然打开，并且房间号没有输错。",
+        "server-error": "点对点大厅服务器返回错误，请稍后重试。",
+        "socket-error": "与点对点大厅的连接失败，可能是网络、防火墙或浏览器限制。",
+        "socket-closed": "与点对点大厅的连接已关闭，请重新创建或加入房间。",
+        "unavailable-id": "这个房间号暂时被占用，请房主重新创建一个房间。",
+        "webrtc": "两台设备之间的点对点通道建立失败，可能是网络 NAT 或防火墙限制。"
+      };
+      return map[type] || raw;
+    }
+
     function sanitizeDeck(deck) {
       return (Array.isArray(deck) ? deck : []).filter(name => cardByName.has(name)).slice(0, 8);
     }
@@ -2889,6 +2943,7 @@ Vines|藤蔓
         roomCode: "",
         peer: null,
         conn: null,
+        peerOpen: false,
         connected: false,
         remoteDeck: [],
         status: silent ? online.status : "已断开在线连接。可以重新创建房间或输入房间号加入。"
@@ -2908,27 +2963,45 @@ Vines|藤蔓
         roomCode: code,
         peer: null,
         conn: null,
+        peerOpen: false,
         connected: false,
         remoteDeck: [],
-        status: "正在创建房间。"
+        status: "正在进入房间大厅。"
       };
       selectedEnemyHumanDeck = [];
-      const peer = new Peer(onlinePeerId(code), { debug: 1 });
+      const peer = new Peer(onlinePeerId(code), peerOptions());
       online.peer = peer;
       peer.on("open", () => {
-        setOnlineStatus("房间已创建。把房间号发给另一台设备，对方加入后就能开始。");
+        if (online.peer !== peer) return;
+        online.peerOpen = true;
+        setOnlineStatus("你已作为玩家A进入房间。把房间号发给另一台设备，然后等待玩家B加入。");
         renderSetup();
       });
       peer.on("connection", conn => {
+        if (online.peer !== peer) return;
         if (online.conn && online.conn.open) {
           conn.close();
           return;
         }
         setupOnlineConnection(conn);
       });
+      peer.on("disconnected", () => {
+        if (online.peer !== peer) return;
+        online.peerOpen = false;
+        online.connected = false;
+        setOnlineStatus("已从房间大厅断开。请点击断开后重新创建房间。");
+        renderSetup();
+      });
+      peer.on("close", () => {
+        if (online.peer !== peer) return;
+        online.peerOpen = false;
+        online.connected = false;
+        setOnlineStatus("房间已关闭。可以重新创建房间。");
+        renderSetup();
+      });
       peer.on("error", err => {
-        const detail = err?.type === "unavailable-id" ? "房间号被占用，请重新创建一次。" : (err?.message || err?.type || "未知错误");
-        setOnlineStatus(`连接错误：${detail}`);
+        if (online.peer !== peer) return;
+        setOnlineStatus(`连接错误：${describePeerError(err)}`);
         renderSetup();
       });
       saveSetup();
@@ -2952,18 +3025,37 @@ Vines|藤蔓
         roomCode: code,
         peer: null,
         conn: null,
+        peerOpen: false,
         connected: false,
         remoteDeck: [],
         status: "正在加入房间。"
       };
-      const peer = new Peer({ debug: 1 });
+      const peer = new Peer(peerOptions());
       online.peer = peer;
       peer.on("open", () => {
+        if (online.peer !== peer) return;
+        online.peerOpen = true;
+        setOnlineStatus("已进入在线大厅，正在连接房主。");
         const conn = peer.connect(onlinePeerId(code), { reliable: true });
         setupOnlineConnection(conn);
       });
+      peer.on("disconnected", () => {
+        if (online.peer !== peer) return;
+        online.peerOpen = false;
+        online.connected = false;
+        setOnlineStatus("已从房间大厅断开。请重新加入房间。");
+        renderSetup();
+      });
+      peer.on("close", () => {
+        if (online.peer !== peer) return;
+        online.peerOpen = false;
+        online.connected = false;
+        setOnlineStatus("在线连接已关闭。请重新加入房间。");
+        renderSetup();
+      });
       peer.on("error", err => {
-        setOnlineStatus(`连接错误：${err?.message || err?.type || "未知错误"}`);
+        if (online.peer !== peer) return;
+        setOnlineStatus(`连接错误：${describePeerError(err)}`);
         renderSetup();
       });
       saveSetup();
@@ -2973,20 +3065,26 @@ Vines|藤蔓
     function setupOnlineConnection(conn) {
       online.conn = conn;
       conn.on("open", () => {
+        if (online.conn !== conn) return;
         online.connected = true;
         setOnlineStatus(online.role === "host" ? "对手已加入。双方都选满 8 张卡后，房主可以开始。" : "已加入房间。选满 8 张卡后等待房主开始。");
         onlineSendDeck();
         renderSetup();
       });
-      conn.on("data", handleOnlineMessage);
+      conn.on("data", message => {
+        if (online.conn !== conn) return;
+        handleOnlineMessage(message);
+      });
       conn.on("close", () => {
+        if (online.conn !== conn) return;
         online.connected = false;
-        setOnlineStatus("对方连接已断开。当前战斗不会继续同步。");
+        setOnlineStatus(online.role === "host" ? "玩家B已断开。房主仍在房间里，可以等待对方重新加入。" : "与房主的连接已断开，请重新加入房间。");
         renderSetup();
       });
       conn.on("error", err => {
+        if (online.conn !== conn) return;
         online.connected = false;
-        setOnlineStatus(`连接错误：${err?.message || "未知错误"}`);
+        setOnlineStatus(`连接错误：${describePeerError(err)}`);
         renderSetup();
       });
     }
