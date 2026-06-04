@@ -2094,7 +2094,7 @@ Vines|藤蔓
     const riverJumpers = set(["Hog Rider", "Royal Hogs", "Prince", "Dark Prince", "Ram Rider", "Cursed Hog", "Battle Healer"]);
     const diesOnAttackNames = set(["Ice Spirit", "Fire Spirit", "Electro Spirit", "Heal Spirit", "Skeleton Barrel", "Battle Ram", "Suspicious Bush", "Wall Breakers"]);
     const ownHalfOnlySpells = set(["The Log", "Barbarian Barrel", "Royal Delivery"]);
-    const fullArenaDeployCards = set(["Goblin Drill"]);
+    const fullArenaDeployCards = set(["Goblin Drill", "Miner"]);
     const spellAreas = {
       "Fireball": { radius: 2.5, towerRatio: 0.30, knock: 0.45 },
       "Rocket": { radius: 2.0, towerRatio: 0.25 },
@@ -2208,6 +2208,7 @@ Vines|藤蔓
       if (card.name === "Battle Healer") return ["登场治疗", "攻击治疗", "Hover越河", "不疗建筑"];
       if (card.name === "Ice Golem") return ["只看建筑", "死亡冰爆", "范围减速"];
       if (card.name === "Elixir Golem") return ["只看建筑", "二段分裂", "送对手圣水"];
+      if (card.name === "Miner") return ["全场部署", "潜行奇袭", "地面近战"];
       if (CHAMPION_ABILITIES[card.name]) return ["英雄技能", `${CHAMPION_ABILITIES[card.name].cost}费`, CHAMPION_ABILITIES[card.name].label];
       if (card.type === "Spell") {
         const badges = [ownHalfOnlySpells.has(card.name) ? "己方半场" : "全场法术"];
@@ -2216,7 +2217,13 @@ Vines|藤蔓
         if (lineSpells[card.name]) badges.push("路径伤害");
         return badges;
       }
-      if (fullArenaDeployCards.has(card.name)) return ["全场部署", "建筑", `定时出${cardName(card.spawnName)}`, `破裂出${cardName(card.deathSpawnName)}`];
+      if (fullArenaDeployCards.has(card.name)) {
+        const fullArenaBadges = ["全场部署"];
+        if (card.type === "Building") fullArenaBadges.push("建筑");
+        if (card.spawnName) fullArenaBadges.push(`定时出${cardName(card.spawnName)}`);
+        if (card.deathSpawnName) fullArenaBadges.push(`破裂出${cardName(card.deathSpawnName)}`);
+        return fullArenaBadges;
+      }
       const badges = [];
       if (card.type === "Building") {
         badges.push(card.attacks ? "攻击建筑" : "无攻击建筑");
@@ -2395,6 +2402,7 @@ Vines|藤蔓
       }
       if (card.name === "Bomb Tower") notes.push("炸弹塔消失或被摧毁后会留下 3 秒死亡炸弹，在文字版里换算为当前阶段回合数后爆炸。");
       if (card.name === "Goblin Drill") notes.push("哥布林钻机是全场部署建筑，可钻到敌方半场或中线位置，并持续产出哥布林；破裂后再放出哥布林。");
+      if (card.name === "Miner") notes.push("掘地矿工可以全场部署到任意陆地格，直接从目标位置钻出，用于偷塔、吸引火力或切后排；他仍是地面近战单位，不能放在河道水格。");
       if (card.name === "Goblin Machine") notes.push("哥布林机甲的普通手臂是近战地面攻击；火箭发射器会预瞄 2.5 到 5 格内的空中或地面目标当前位置，下回合落点爆炸，目标离开落点就会落空。");
       if (card.name === "Magic Archer") notes.push(`神箭游侠的箭会穿透目标并沿直线继续飞行；本平台按约 7 格锁定射程、${MAGIC_ARCHER_PROJECTILE_RANGE} 格投射距离换算，直线和斜线都会用蓝色线显示，路径上的敌方单位与防御塔都会受伤。`);
       if (card.name === "Battle Healer") notes.push(`战斗天使登场时会释放一圈治疗光环，攻击命中后也会在自身周围释放治疗；治疗只作用于友方部队，不会治疗建筑、防御塔或已满血单位。她保留 Hover 越河特性，但仍是地面近战单位，不能攻击空中目标。`);
@@ -2457,6 +2465,7 @@ Vines|藤蔓
       if (card.type === "Spell") notes.push("法术范围按文字棋盘格换算，允许出现蹭塔、同时命中单位和建筑等原作思路。");
       if (groupDeployProfiles[card.name]) notes.push("多人卡牌已按原作单位数量拆开，不再作为一个整体单位结算。");
       if (card.name === "Goblin Drill") notes.push("哥布林钻机的全场部署是官方机制中的特殊建筑例外。");
+      if (card.name === "Miner") notes.push("掘地矿工的全场部署按官方潜行部署机制处理；在本平台中允许部署到双方半场的任意陆地格。");
       if (card.name === "Bomb Tower") notes.push("炸弹塔死亡炸弹参考原作 3 秒延迟，在文字版中换算为当前阶段回合数。");
       if (card.name === "Magic Archer") notes.push("神箭游侠的 7 格射程、穿透箭和约 11 格投射距离按公开卡牌数据换算为文字棋盘：锁定目标后沿射击方向继续判定路径命中。");
       if (card.name === "Battle Healer") notes.push("战斗天使的登场治疗、攻击治疗、Hover 越河和不治疗建筑按官方卡牌说明与平衡资料换算；治疗数值显示为本平台实战结算值。");
@@ -4202,7 +4211,12 @@ Vines|藤蔓
         }
         return { ok: true };
       }
-      if (fullArenaDeployCards.has(card.name)) return { ok: true };
+      if (fullArenaDeployCards.has(card.name)) {
+        if (card.name === "Miner" && row === 10 && isRiverLane(lane)) {
+          return { ok: false, reason: "掘地矿工可以全场部署，但不能钻出在河道水格；请点任意陆地格。" };
+        }
+        return { ok: true };
+      }
       if (card.type === "Spell") {
         if (!ownHalfOnlySpells.has(card.name) || onOwnHalf) return { ok: true };
         return { ok: false, reason: `${card.zh}只能放在${sideName(side)}的己方半场。` };
@@ -6451,7 +6465,7 @@ Vines|藤蔓
     function blockedByRiverCell(unit, lane = unit.lane, pos = unit.pos) {
       if (!state || state.mode === "touchdown") return false;
       if (Math.round(pos) !== 10 || !isRiverLane(lane)) return false;
-      if (fullArenaDeployCards.has(unit.name)) return false;
+      if (unit.name === "Goblin Drill") return false;
       return unit.type === "Building" || (!unit.isAir && !unit.canJumpRiver);
     }
 
