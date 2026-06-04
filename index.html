@@ -1927,6 +1927,8 @@ Electro Dragon|雷电飞龙
 Firecracker|烟花炮手
 Mighty Miner|威猛矿工
 Elixir Golem|圣水戈仑
+Elixir Golemite|小圣水戈仑
+Elixir Blob|圣水泡泡
 Battle Healer|战斗天使
 Skeleton King|骷髅帝王
 Archer Queen|弓箭女皇
@@ -2072,7 +2074,7 @@ Vines|藤蔓
     const splashNames = set(["Valkyrie", "Bomber", "Baby Dragon", "Wizard", "Witch", "Dark Prince", "Sparky", "Bowler", "Executioner", "Mega Knight", "Firecracker", "Electro Wizard", "Electro Dragon", "Skeleton King", "Golden Knight", "Monk", "Electro Giant", "Goblin Demolisher", "Goblinstein", "Boss Bandit", "Bomb Tower", "Mortar", "Furnace"]);
     const swarmNames = set(["Archers", "Goblins", "Minions", "Barbarians", "Skeletons", "Skeleton Army", "Spear Goblins", "Minion Horde", "Guards", "Three Musketeers", "Goblin Gang", "Elite Barbarians", "Royal Recruits", "Bats", "Zappies", "Rascals", "Skeleton Dragons", "Royal Hogs"]);
     const fastNames = set(["Goblins", "Hog Rider", "Prince", "Battle Ram", "Lumberjack", "Bandit", "Bats", "Royal Ghost", "Ram Rider", "Wall Breakers", "Royal Hogs", "Elite Barbarians", "Fire Spirit", "Ice Spirit", "Electro Spirit", "Heal Spirit", "Berserker", "Boss Bandit"]);
-    const slowNames = set(["Giant", "P.E.K.K.A", "Golem", "Giant Skeleton", "Lava Hound", "Bowler", "Sparky", "Royal Giant", "Electro Giant", "Mega Knight", "Goblin Giant", "Rune Giant"]);
+    const slowNames = set(["Giant", "P.E.K.K.A", "Golem", "Giant Skeleton", "Lava Hound", "Bowler", "Sparky", "Royal Giant", "Electro Giant", "Mega Knight", "Goblin Giant", "Elixir Golem", "Rune Giant"]);
     const highDpsNames = set(["P.E.K.K.A", "Mini P.E.K.K.A", "Prince", "Sparky", "Inferno Dragon", "Inferno Tower", "Hunter", "Mighty Miner", "Archer Queen", "Boss Bandit"]);
     const buildingAirAttackers = set(["Inferno Tower", "Tesla"]);
     const noAttackBuildings = set(["Elixir Collector", "Goblin Cage", "Goblin Hut", "Barbarian Hut", "Tombstone", "Furnace", "Goblin Drill"]);
@@ -2119,6 +2121,13 @@ Vines|藤蔓
     const BATTLE_HEALER_ATTACK_RADIUS = 3.6;
     const BATTLE_HEALER_DEPLOY_HEAL = 180;
     const BATTLE_HEALER_ATTACK_HEAL = 155;
+    const ICE_GOLEM_DEATH_DAMAGE = 95;
+    const ICE_GOLEM_DEATH_TOWER_DAMAGE = 29;
+    const ICE_GOLEM_DEATH_RADIUS = 1.85;
+    const ICE_GOLEM_DEATH_SLOW_TURNS = 2;
+    const ELIXIR_GOLEM_REWARD = 1;
+    const ELIXIR_GOLEMITE_REWARD = 0.5;
+    const ELIXIR_BLOB_REWARD = 0.5;
     const lineSpells = {
       "The Log": { length: 10.1, width: 3.9, knock: 0.9, towerRatio: 0.15 },
       "Barbarian Barrel": { length: 4.5, width: 2.6, knock: 0.45, towerRatio: 0.20 }
@@ -2197,6 +2206,8 @@ Vines|藤蔓
       if (card.name === "Goblin Machine") return ["近战手臂", "导弹预瞄", "可防空"];
       if (card.name === "Magic Archer") return ["远射程", "穿透箭", "蓝线显示", "可防空"];
       if (card.name === "Battle Healer") return ["登场治疗", "攻击治疗", "Hover越河", "不疗建筑"];
+      if (card.name === "Ice Golem") return ["只看建筑", "死亡冰爆", "范围减速"];
+      if (card.name === "Elixir Golem") return ["只看建筑", "二段分裂", "送对手圣水"];
       if (CHAMPION_ABILITIES[card.name]) return ["英雄技能", `${CHAMPION_ABILITIES[card.name].cost}费`, CHAMPION_ABILITIES[card.name].label];
       if (card.type === "Spell") {
         const badges = [ownHalfOnlySpells.has(card.name) ? "己方半场" : "全场法术"];
@@ -2298,6 +2309,8 @@ Vines|藤蔓
         rows.push(["登场治疗", `半径 ${BATTLE_HEALER_DEPLOY_RADIUS} · ${BATTLE_HEALER_DEPLOY_HEAL} 点`]);
         rows.push(["攻击治疗", `半径 ${BATTLE_HEALER_ATTACK_RADIUS} · ${BATTLE_HEALER_ATTACK_HEAL} 点`]);
       }
+      if (card.name === "Ice Golem") rows.push(["死亡冰爆", `半径 ${ICE_GOLEM_DEATH_RADIUS} · ${ICE_GOLEM_DEATH_DAMAGE} 点 · 减速 ${ICE_GOLEM_DEATH_SLOW_TURNS} 回合`]);
+      if (card.name === "Elixir Golem") rows.push(["死亡奖励", `本体 ${ELIXIR_GOLEM_REWARD} 圣水，小体/泡泡各 ${ELIXIR_GOLEMITE_REWARD} 圣水`]);
       rows.push(["速度", card.type === "Building" ? "固定建筑" : speedText(card.speed)]);
       rows.push(["攻击目标", targetRule(card)]);
       rows.push(["命中能力", hitRule(card)]);
@@ -2385,12 +2398,14 @@ Vines|藤蔓
       if (card.name === "Goblin Machine") notes.push("哥布林机甲的普通手臂是近战地面攻击；火箭发射器会预瞄 2.5 到 5 格内的空中或地面目标当前位置，下回合落点爆炸，目标离开落点就会落空。");
       if (card.name === "Magic Archer") notes.push(`神箭游侠的箭会穿透目标并沿直线继续飞行；本平台按约 7 格锁定射程、${MAGIC_ARCHER_PROJECTILE_RANGE} 格投射距离换算，直线和斜线都会用蓝色线显示，路径上的敌方单位与防御塔都会受伤。`);
       if (card.name === "Battle Healer") notes.push(`战斗天使登场时会释放一圈治疗光环，攻击命中后也会在自身周围释放治疗；治疗只作用于友方部队，不会治疗建筑、防御塔或已满血单位。她保留 Hover 越河特性，但仍是地面近战单位，不能攻击空中目标。`);
+      if (card.name === "Ice Golem") notes.push(`戈仑冰人只锁定建筑；死亡后会在小范围内造成冰爆伤害，并让敌方单位减速 ${ICE_GOLEM_DEATH_SLOW_TURNS} 回合，适合拉扯后拖慢反打。`);
       if (banditDashCards.has(card.name)) notes.push("前方 3.5 到 6 格有可攻击的地面单位或防御塔、且身边没有近战目标时，会先进入“冲刺”状态；冲刺准备阶段不会受到伤害，下一次行动会冲到目标面前并造成冲撞伤害。");
       if (card.name === "Lumberjack") notes.push("狂暴樵夫死亡时会在原地掉落狂暴法术，造成少量范围伤害，并让范围内友方单位和建筑进入狂暴。");
       if (card.name === "Elixir Collector") notes.push("圣水收集器不攻击，每隔数回合为己方额外生成圣水。");
       if (card.spawnName && card.type !== "Building") notes.push(`存活期间会${spawnRuleText(card)}。`);
       if (card.deathSpawnCount > 0 && !["Goblin Drill", "Bomb Tower"].includes(card.name)) notes.push(`死亡或破裂时会释放 ${card.deathSpawnCount} 个${cardName(card.deathSpawnName)}。`);
       if (card.name === "Golem") notes.push("戈仑石人死亡时造成范围爆炸并分裂成两个小戈仑；小戈仑死亡也会产生小范围爆炸。");
+      if (card.name === "Elixir Golem") notes.push("圣水戈仑死亡时分裂成 2 个小圣水戈仑，并给予对手 1 点圣水；每个小圣水戈仑死亡后再分裂成 2 个圣水泡泡，并给予对手 0.5 点圣水；每个圣水泡泡死亡后再给予对手 0.5 点圣水，不再继续分裂。");
       if (card.name === "Giant Skeleton") notes.push("骷髅巨人死亡后留下 3 秒炸弹，在文字版里按当前圣水阶段换算成回合后爆炸。");
       if (card.name === "Night Witch") notes.push("暗夜女巫会周期召唤蝙蝠，死亡时也会留下最后一只蝙蝠。");
       if (card.name === "Lava Hound") notes.push("熔岩猎犬本体只攻击建筑；死亡后分裂成 6 只小猎犬，小猎犬可以攻击普通单位和建筑。");
@@ -2445,6 +2460,8 @@ Vines|藤蔓
       if (card.name === "Bomb Tower") notes.push("炸弹塔死亡炸弹参考原作 3 秒延迟，在文字版中换算为当前阶段回合数。");
       if (card.name === "Magic Archer") notes.push("神箭游侠的 7 格射程、穿透箭和约 11 格投射距离按公开卡牌数据换算为文字棋盘：锁定目标后沿射击方向继续判定路径命中。");
       if (card.name === "Battle Healer") notes.push("战斗天使的登场治疗、攻击治疗、Hover 越河和不治疗建筑按官方卡牌说明与平衡资料换算；治疗数值显示为本平台实战结算值。");
+      if (card.name === "Ice Golem") notes.push("戈仑冰人的死亡伤害和减速按官方死亡冰爆机制换算为小范围伤害与短时减速。");
+      if (card.name === "Elixir Golem") notes.push("圣水戈仑的三段形态、2→4 分裂和给对手总计 4 点圣水的风险收益按官方机制做成本平台化结算。");
       return notes;
     }
 
@@ -3145,6 +3162,7 @@ Vines|藤蔓
         time: 0,
         playerElixir: 5,
         enemyElixir: 5,
+        elixirFragments: { player: 0, enemy: 0 },
         playerCycle: shuffle(playerCards),
         enemyCycle: shuffle(enemyCards),
         playerLast: null,
@@ -4860,6 +4878,68 @@ Vines|藤蔓
           shieldHp: 0
         };
       }
+      if (name === "Elixir Golemite") {
+        return {
+          name,
+          zh: cardName(name),
+          cost: 0,
+          rarity: "rare",
+          type: "Troop",
+          count: 1,
+          isAir: false,
+          isRanged: false,
+          isSplash: false,
+          isSwarm: false,
+          isBuildingTargeter: true,
+          isWinCondition: true,
+          diesOnAttack: false,
+          canHitAir: false,
+          canHitGround: true,
+          hp: 520,
+          damage: 82,
+          range: 0.75,
+          speed: 0.9,
+          attacks: true,
+          spawnEvery: 0,
+          spawnName: "",
+          spawnCount: 0,
+          deathSpawnName: "",
+          deathSpawnCount: 0,
+          buildingLife: 0,
+          shieldHp: 0
+        };
+      }
+      if (name === "Elixir Blob") {
+        return {
+          name,
+          zh: cardName(name),
+          cost: 0,
+          rarity: "rare",
+          type: "Troop",
+          count: 1,
+          isAir: false,
+          isRanged: false,
+          isSplash: false,
+          isSwarm: true,
+          isBuildingTargeter: true,
+          isWinCondition: true,
+          diesOnAttack: false,
+          canHitAir: false,
+          canHitGround: true,
+          hp: 245,
+          damage: 46,
+          range: 0.75,
+          speed: 1.05,
+          attacks: true,
+          spawnEvery: 0,
+          spawnName: "",
+          spawnCount: 0,
+          deathSpawnName: "",
+          deathSpawnCount: 0,
+          buildingLife: 0,
+          shieldHp: 0
+        };
+      }
       if (name === "Lava Pup") {
         return {
           name,
@@ -6117,6 +6197,24 @@ Vines|藤蔓
         const hits = applyDeathExplosion(unit.side, lane, pos, 96, 34, 1.45, cardName(unit.name), { knock: 0.2, short: "小戈" });
         return `${sideName(unit.side)}的 ${cardName(unit.name)} 倒下时爆出一圈碎石，波及 ${hits.units} 个单位${hits.towers ? `和 ${hits.towers} 座塔` : ""}。`;
       }
+      if (unit.name === "Ice Golem") {
+        const hits = applyDeathExplosion(unit.side, lane, pos, ICE_GOLEM_DEATH_DAMAGE, ICE_GOLEM_DEATH_TOWER_DAMAGE, ICE_GOLEM_DEATH_RADIUS, cardName(unit.name), { slow: ICE_GOLEM_DEATH_SLOW_TURNS, short: "冰爆" });
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 倒下时释放冰爆，波及 ${hits.units} 个单位${hits.towers ? `和 ${hits.towers} 座塔` : ""}，并减速范围内敌方单位。`;
+      }
+      if (unit.name === "Elixir Golem") {
+        spawnElixirGolemStage(unit.side, "Elixir Golemite", lane, pos, 2, 0.86);
+        const reward = grantElixirToOpponent(unit.side, ELIXIR_GOLEM_REWARD, `${cardName(unit.name)}被击倒`);
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 被击倒，分裂成 2 个${cardName("Elixir Golemite")}，并给予${sideName(reward.receiver)} ${formatElixirAmount(ELIXIR_GOLEM_REWARD)} 点圣水${reward.gained ? "" : "（已到上限则溢出）"}。`;
+      }
+      if (unit.name === "Elixir Golemite") {
+        spawnElixirGolemStage(unit.side, "Elixir Blob", lane, pos, 2, 0.78);
+        const reward = grantElixirToOpponent(unit.side, ELIXIR_GOLEMITE_REWARD, `${cardName(unit.name)}被击倒`);
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 被击倒，分裂成 2 个${cardName("Elixir Blob")}，并给予${sideName(reward.receiver)} ${formatElixirAmount(ELIXIR_GOLEMITE_REWARD)} 点圣水${reward.pending ? `（半圣水池累计 ${formatElixirAmount(reward.pending)} 点）` : reward.gained ? "" : "（已到上限则溢出）"}。`;
+      }
+      if (unit.name === "Elixir Blob") {
+        const reward = grantElixirToOpponent(unit.side, ELIXIR_BLOB_REWARD, `${cardName(unit.name)}被击倒`);
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 被击倒，给予${sideName(reward.receiver)} ${formatElixirAmount(ELIXIR_BLOB_REWARD)} 点圣水${reward.pending ? `（半圣水池累计 ${formatElixirAmount(reward.pending)} 点）` : reward.gained ? "" : "（已到上限则溢出）"}。`;
+      }
       if (unit.name === "Giant Skeleton") {
         const fuse = deathBombTurns(3);
         state.pendingExplosions.push({
@@ -6165,7 +6263,13 @@ Vines|藤蔓
     }
 
     function applyDeathExplosion(side, lane, pos, damage, towerDamage, radius, label, options = {}) {
-      const units = areaDamage(side, lane, pos, damage, { radius, knock: options.knock || 0 });
+      const units = areaDamage(side, lane, pos, damage, {
+        radius,
+        knock: options.knock || 0,
+        slow: options.slow || 0,
+        freeze: options.freeze || 0,
+        stun: options.stun || 0
+      });
       const enemy = side === "player" ? "enemy" : "player";
       const towers = damageTowersInArea(enemy, lane, pos, towerDamage, radius, label);
       state.effects.push({ kind: "blast", lane, pos, radius, label, short: options.short || "炸" });
@@ -6179,6 +6283,37 @@ Vines|藤蔓
         const offset = index === 0 ? -0.28 : 0.28;
         spawnUnit(side, "Golemite", spawnLane, clampPos(pos + offset * dir), 1, { jitter: false });
       });
+    }
+
+    function spawnElixirGolemStage(side, name, lane, pos, amount, scale) {
+      const lanes = lanesAround(lane).slice(0, amount);
+      const dir = side === "player" ? 1 : -1;
+      for (let i = 0; i < amount; i++) {
+        const spawnLane = lanes[i % lanes.length] || lane;
+        const offset = (i - (amount - 1) / 2) * 0.34;
+        spawnUnit(side, name, spawnLane, clampPos(pos + offset * dir), scale, { jitter: false });
+      }
+    }
+
+    function grantElixirToOpponent(ownerSide, amount, cause) {
+      const receiver = ownerSide === "player" ? "enemy" : "player";
+      if (!state.elixirFragments) state.elixirFragments = { player: 0, enemy: 0 };
+      state.elixirFragments[receiver] = (state.elixirFragments[receiver] || 0) + amount;
+      const whole = Math.floor(state.elixirFragments[receiver] + 0.0001);
+      let gained = 0;
+      if (whole > 0) {
+        const key = elixirKey(receiver);
+        const before = state[key];
+        state[key] = Math.min(10, state[key] + whole);
+        gained = state[key] - before;
+        state.elixirFragments[receiver] = Math.max(0, state.elixirFragments[receiver] - whole);
+        if (gained > 0) log(`${sideName(receiver)}因为${cause}获得 ${gained} 点圣水。`);
+      }
+      return { receiver, gained, pending: state.elixirFragments[receiver] || 0 };
+    }
+
+    function formatElixirAmount(amount) {
+      return Number.isInteger(amount) ? String(amount) : amount.toFixed(1).replace(/0$/, "").replace(/\.$/, "");
     }
 
     function releaseBuildingPayload(unit) {
@@ -6298,6 +6433,7 @@ Vines|藤蔓
       state.pendingMissiles = [];
       state.playerElixir = 5;
       state.enemyElixir = 5;
+      state.elixirFragments = { player: 0, enemy: 0 };
       state.pendingActions = { player: false, enemy: true };
       selectedHandIndex = { player: null, enemy: null };
       boardActiveSide = "player";
