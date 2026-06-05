@@ -440,6 +440,99 @@
       font-size: 13px;
     }
 
+    .online-chat {
+      display: none;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.76);
+    }
+
+    .online-chat.active {
+      display: grid;
+    }
+
+    .online-chat-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .online-chat-hint {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .online-chat-log {
+      min-height: 96px;
+      max-height: 168px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcff;
+      padding: 8px;
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    .online-chat-entry {
+      display: grid;
+      gap: 2px;
+      padding: 5px 0;
+      border-bottom: 1px solid #eef2f7;
+    }
+
+    .online-chat-entry:last-child {
+      border-bottom: none;
+    }
+
+    .online-chat-entry.mine {
+      text-align: right;
+    }
+
+    .online-chat-meta {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .online-chat-text {
+      color: var(--ink);
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .online-chat-empty {
+      color: var(--muted);
+      text-align: center;
+      padding: 26px 6px;
+    }
+
+    .online-chat-form {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    .online-chat-form input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 10px;
+      background: #fff;
+      color: var(--ink);
+      font-weight: 800;
+    }
+
     .editor-tabs {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1017,6 +1110,7 @@
       .mode-row,
       .online-actions,
       .online-join,
+      .online-chat-form,
       .editor-tabs,
       .difficulty-row,
       .hand-grid,
@@ -1335,6 +1429,36 @@
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(220, 238, 255, 0.96));
       box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.9), 0 5px 0 rgba(17, 73, 137, 0.3);
+    }
+
+    .online-chat {
+      border: 3px solid #75a4da;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(224, 239, 255, 0.92));
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.78), 0 4px 0 rgba(14, 57, 111, 0.22);
+    }
+
+    .online-chat-head {
+      color: #153967;
+      font-family: "Trebuchet MS", "Microsoft YaHei", "PingFang SC", sans-serif;
+      font-weight: 900;
+    }
+
+    .online-chat-log {
+      border: 3px solid #2d609f;
+      background: linear-gradient(180deg, #ffffff, #edf7ff);
+      box-shadow: inset 0 3px 0 rgba(13, 54, 107, 0.08);
+    }
+
+    .online-chat-entry.mine .online-chat-text {
+      color: #0b55a8;
+      font-weight: 800;
+    }
+
+    .online-chat-form input {
+      border: 3px solid #75a4da;
+      font-family: "Trebuchet MS", "Microsoft YaHei", "PingFang SC", sans-serif;
+      box-shadow: inset 0 3px 0 rgba(13, 54, 107, 0.08);
     }
 
     .card-detail-wide {
@@ -1791,6 +1915,17 @@
                 房间号：<span class="room-code" id="roomCodeDisplay">------</span>
               </div>
               <div class="online-status" id="onlineStatus">在线双人使用点对点 + HTTPS 备用中继：房主创建房间，另一台设备输入房间号加入。</div>
+              <div class="online-chat" id="setupOnlineChat">
+                <div class="online-chat-head">
+                  <strong>房间聊天</strong>
+                  <span class="online-chat-hint" id="setupOnlineChatHint">创建或加入房间后可以聊天</span>
+                </div>
+                <div class="online-chat-log" id="setupOnlineChatLog"></div>
+                <form class="online-chat-form" id="setupOnlineChatForm">
+                  <input id="setupOnlineChatInput" maxlength="120" autocomplete="off" placeholder="给对手发一句话">
+                  <button class="secondary" type="submit">发送</button>
+                </form>
+              </div>
             </div>
             <div class="editor-tabs" id="editorTabs">
               <button data-edit-side="player">编辑玩家A</button>
@@ -1852,6 +1987,17 @@
             </div>
             <h3>战报</h3>
             <div class="log" id="battleLog"></div>
+            <div class="online-chat battle-chat" id="battleOnlineChat">
+              <div class="online-chat-head">
+                <strong>对战聊天</strong>
+                <span class="online-chat-hint" id="battleOnlineChatHint">在线房间内可用</span>
+              </div>
+              <div class="online-chat-log" id="battleOnlineChatLog"></div>
+              <form class="online-chat-form" id="battleOnlineChatForm">
+                <input id="battleOnlineChatInput" maxlength="120" autocomplete="off" placeholder="和对手聊天">
+                <button class="secondary" type="submit">发送</button>
+              </form>
+            </div>
           </div>
         </section>
 
@@ -2765,6 +2911,8 @@ Vines|藤蔓
       connected: false,
       startAck: false,
       remoteDeck: [],
+      chatMessages: [],
+      chatSeen: {},
       status: "在线双人使用点对点 + HTTPS 备用中继：房主创建房间，另一台设备输入房间号加入。"
     };
     const DEMO_SPEEDS = [
@@ -2783,6 +2931,8 @@ Vines|藤蔓
     const ONLINE_CONNECT_TIMEOUT_MS = 18000;
     const ONLINE_RELAY_BASE_URL = "https://ntfy.sh";
     const ONLINE_RELAY_CHUNK_SIZE = 2600;
+    const ONLINE_CHAT_LIMIT = 80;
+    const ONLINE_CHAT_MAX_LENGTH = 120;
     const AI_DIFFICULTIES = {
       easy: {
         label: "简单",
@@ -2966,6 +3116,7 @@ Vines|藤蔓
         <span class="pill">${gameMode === "online" ? onlineConnectionPill() : "离线单文件"}</span>
       `;
       renderCardDetail();
+      renderOnlineChat();
     }
 
     function onlineStatusText() {
@@ -3027,6 +3178,111 @@ Vines|藤蔓
       if (!panel) return;
       el("roomCodeDisplay").textContent = online.roomCode || "------";
       el("onlineStatus").textContent = onlineStatusText();
+      renderOnlineChat();
+    }
+
+    function onlineChatIsActive() {
+      return gameMode === "online" || state?.mode === "online";
+    }
+
+    function onlineChatHintText() {
+      if (!onlineChatIsActive()) return "";
+      if (!online.roomCode) return "先创建或加入房间";
+      if (online.connected) return "双方已连接";
+      if (online.relayOpen) return "等待对手加入";
+      return "正在连接房间";
+    }
+
+    function onlineChatAuthor(chat) {
+      const isMine = chat.from && chat.from === online.relayClientId;
+      return isMine ? "你" : "对手";
+    }
+
+    function onlineChatTime(at) {
+      const date = new Date(Number(at) || Date.now());
+      return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+    }
+
+    function onlineChatMarkup() {
+      if (!online.chatMessages.length) return `<div class="online-chat-empty">还没有聊天消息</div>`;
+      return online.chatMessages.map(chat => {
+        const isMine = chat.from && chat.from === online.relayClientId;
+        return `
+          <div class="online-chat-entry ${isMine ? "mine" : ""}">
+            <div class="online-chat-meta">${onlineChatAuthor(chat)} · ${onlineChatTime(chat.at)}</div>
+            <div class="online-chat-text">${escapeAttr(chat.text)}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderOnlineChat() {
+      const active = onlineChatIsActive();
+      const canType = active && Boolean(online.roomCode);
+      const markup = onlineChatMarkup();
+      ["setup", "battle"].forEach(prefix => {
+        const box = el(`${prefix}OnlineChat`);
+        if (!box) return;
+        box.classList.toggle("active", active);
+        const logBox = el(`${prefix}OnlineChatLog`);
+        const input = el(`${prefix}OnlineChatInput`);
+        const hint = el(`${prefix}OnlineChatHint`);
+        if (logBox && logBox.innerHTML !== markup) {
+          logBox.innerHTML = markup;
+          logBox.scrollTop = logBox.scrollHeight;
+        }
+        if (input) input.disabled = !canType;
+        if (hint) hint.textContent = onlineChatHintText();
+      });
+    }
+
+    function nextOnlineChatId() {
+      online.relayClientId = online.relayClientId || onlineClientId();
+      return `${online.relayClientId}-chat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function addOnlineChatMessage(chat, options = {}) {
+      if (!chat || typeof chat !== "object") return false;
+      const text = String(chat.text || "").replace(/\s+/g, " ").trim().slice(0, ONLINE_CHAT_MAX_LENGTH);
+      if (!text) return false;
+      const id = String(chat.id || `${chat.from || "chat"}-${chat.at || Date.now()}-${text}`).slice(0, 220);
+      if (online.chatSeen[id]) return false;
+      online.chatSeen[id] = true;
+      online.chatMessages.push({
+        id,
+        from: String(chat.from || ""),
+        side: chat.side === "enemy" ? "enemy" : "player",
+        text,
+        at: Number(chat.at) || Date.now()
+      });
+      if (online.chatMessages.length > ONLINE_CHAT_LIMIT) {
+        const overflow = online.chatMessages.splice(0, online.chatMessages.length - ONLINE_CHAT_LIMIT);
+        overflow.forEach(item => delete online.chatSeen[item.id]);
+      }
+      if (options.render !== false) renderOnlineChat();
+      return true;
+    }
+
+    function sendOnlineChat(prefix) {
+      const input = el(`${prefix}OnlineChatInput`);
+      const text = String(input?.value || "").replace(/\s+/g, " ").trim().slice(0, ONLINE_CHAT_MAX_LENGTH);
+      if (!text) return;
+      if (!online.roomCode) {
+        setOnlineStatus("先创建或加入在线房间，再发送聊天消息。");
+        return;
+      }
+      const chat = {
+        id: nextOnlineChatId(),
+        from: online.relayClientId,
+        side: online.localSide,
+        text,
+        at: Date.now()
+      };
+      if (input) input.value = "";
+      addOnlineChatMessage(chat);
+      if (!onlineSend({ type: "chat", chat })) {
+        setOnlineStatus("聊天消息没有发送成功：连接可能已经断开。");
+      }
     }
 
     function ensurePeerJs() {
@@ -3314,6 +3570,8 @@ Vines|藤蔓
         connected: false,
         startAck: false,
         remoteDeck: [],
+        chatMessages: [],
+        chatSeen: {},
         status: silent ? online.status : "已断开在线连接。可以重新创建房间或输入房间号加入。"
       };
       if (!silent) renderSetup();
@@ -3343,6 +3601,8 @@ Vines|藤蔓
         connected: false,
         startAck: false,
         remoteDeck: [],
+        chatMessages: [],
+        chatSeen: {},
         status: "正在进入房间大厅，并开启 HTTPS 备用中继。"
       };
       selectedEnemyHumanDeck = [];
@@ -3415,6 +3675,8 @@ Vines|藤蔓
         connected: false,
         startAck: false,
         remoteDeck: [],
+        chatMessages: [],
+        chatSeen: {},
         status: "正在加入房间，并尝试 HTTPS 备用中继。"
       };
       startOnlineRelay("guest", code);
@@ -3577,6 +3839,10 @@ Vines|藤蔓
       }
       if (message.type === "action") {
         applyOnlineRemoteAction(message.action);
+        return;
+      }
+      if (message.type === "chat") {
+        addOnlineChatMessage(message.chat);
         return;
       }
       if (message.type === "status") {
@@ -4285,6 +4551,7 @@ Vines|藤蔓
       renderControls("enemy");
       renderMap();
       renderLog();
+      renderOnlineChat();
     }
 
     function towerPercent(t) {
@@ -8035,6 +8302,12 @@ Vines|藤蔓
     el("createRoomBtn").addEventListener("click", createOnlineRoom);
     el("joinRoomBtn").addEventListener("click", joinOnlineRoom);
     el("disconnectRoomBtn").addEventListener("click", () => disconnectOnlineRoom());
+    ["setup", "battle"].forEach(prefix => {
+      el(`${prefix}OnlineChatForm`).addEventListener("submit", event => {
+        event.preventDefault();
+        sendOnlineChat(prefix);
+      });
+    });
     el("startBtn").addEventListener("click", startBattle);
     el("randomBtn").addEventListener("click", randomBalancedDeck);
     el("clearBtn").addEventListener("click", () => {
