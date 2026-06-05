@@ -3113,22 +3113,43 @@ Vines|藤蔓
       localStorage.setItem("textRoyaleDifficulty", aiDifficulty);
     }
 
-    function storedMusicVolume() {
-      const raw = Number(localStorage.getItem("textRoyaleMusicVolume"));
-      return Number.isFinite(raw) ? Math.max(0, Math.min(100, Math.round(raw))) : 40;
+    const MUSIC_VOLUME_KEY = "textRoyaleMusicVolume";
+    const MUSIC_VOLUME_TOUCHED_KEY = "textRoyaleMusicVolumeTouched";
+    const DEFAULT_BATTLE_MUSIC_VOLUME = 40;
+
+    function clampMusicVolume(value) {
+      return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+    }
+
+    function hasManualMusicVolume() {
+      return localStorage.getItem(MUSIC_VOLUME_TOUCHED_KEY) === "1";
+    }
+
+    function storedMusicVolume(defaultVolume = DEFAULT_BATTLE_MUSIC_VOLUME) {
+      const rawText = localStorage.getItem(MUSIC_VOLUME_KEY);
+      const raw = rawText === null ? Number.NaN : Number(rawText);
+      return Number.isFinite(raw) ? clampMusicVolume(raw) : clampMusicVolume(defaultVolume);
     }
 
     function updateMusicVolumeUi(value = storedMusicVolume()) {
-      const volume = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+      const volume = clampMusicVolume(value);
       el("musicVolume").value = String(volume);
       el("musicVolumeValue").textContent = `${volume}%`;
       if (battleMusic) battleMusic.volume = volume / 100;
     }
 
     function setMusicVolume(value) {
-      const volume = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
-      localStorage.setItem("textRoyaleMusicVolume", String(volume));
+      const volume = clampMusicVolume(value);
+      localStorage.setItem(MUSIC_VOLUME_KEY, String(volume));
+      localStorage.setItem(MUSIC_VOLUME_TOUCHED_KEY, "1");
       updateMusicVolumeUi(volume);
+    }
+
+    function battleMusicVolume() {
+      const storedRaw = localStorage.getItem(MUSIC_VOLUME_KEY);
+      const stored = storedMusicVolume(0);
+      if (!hasManualMusicVolume() && (!storedRaw || stored === 0)) return DEFAULT_BATTLE_MUSIC_VOLUME;
+      return storedMusicVolume();
     }
 
     function ensureBattleMusic() {
@@ -3136,7 +3157,7 @@ Vines|藤蔓
       battleMusic = new Audio(BATTLE_MUSIC_SRC);
       battleMusic.loop = true;
       battleMusic.preload = "auto";
-      battleMusic.volume = storedMusicVolume() / 100;
+      battleMusic.volume = battleMusicVolume() / 100;
       return battleMusic;
     }
 
@@ -3145,7 +3166,7 @@ Vines|藤蔓
       const music = ensureBattleMusic();
       if (!restart && !music.paused) return;
       if (restart) music.currentTime = 0;
-      music.volume = storedMusicVolume() / 100;
+      updateMusicVolumeUi(battleMusicVolume());
       const play = music.play();
       if (play?.catch) play.catch(() => {
         state.mapMessage = "浏览器暂时阻止了自动播放；你已经可以用右上角音量条控制背景音乐，下次点击操作后会再次尝试。";
