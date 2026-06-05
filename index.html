@@ -1429,6 +1429,8 @@
     .arena-cell {
       min-height: 34px;
       border: 2px solid #315b8b;
+      position: relative;
+      overflow: hidden;
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.08)),
         #132b4b;
@@ -1476,6 +1478,65 @@
       background: #5b3f17;
     }
 
+    .arena-cell.spell-area {
+      isolation: isolate;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), inset 0 0 16px rgba(255, 255, 255, 0.18);
+    }
+
+    .arena-cell.spell-area::after {
+      content: "";
+      position: absolute;
+      inset: 1px;
+      border: 2px solid rgba(255, 255, 255, 0.72);
+      border-radius: 4px;
+      pointer-events: none;
+      opacity: 0.92;
+      z-index: 0;
+    }
+
+    .arena-cell.spell-player::after {
+      border-color: #65caff;
+      box-shadow: inset 0 0 12px rgba(79, 184, 255, 0.24), 0 0 10px rgba(79, 184, 255, 0.42);
+    }
+
+    .arena-cell.spell-enemy::after {
+      border-color: #ff7b72;
+      box-shadow: inset 0 0 12px rgba(255, 91, 84, 0.24), 0 0 10px rgba(255, 91, 84, 0.42);
+    }
+
+    .arena-cell.spell-fire {
+      background: linear-gradient(180deg, rgba(255, 232, 150, 0.18), rgba(176, 58, 34, 0.34)), #2e2745;
+    }
+
+    .arena-cell.spell-frost {
+      background: linear-gradient(180deg, rgba(185, 239, 255, 0.24), rgba(57, 144, 226, 0.32)), #123052;
+    }
+
+    .arena-cell.spell-poison {
+      background: linear-gradient(180deg, rgba(181, 255, 164, 0.2), rgba(88, 78, 170, 0.35)), #1b2b43;
+    }
+
+    .arena-cell.spell-rage {
+      background: linear-gradient(180deg, rgba(255, 215, 119, 0.2), rgba(156, 61, 214, 0.34)), #261d4b;
+    }
+
+    .arena-cell.spell-earth {
+      background: linear-gradient(180deg, rgba(244, 201, 101, 0.22), rgba(92, 66, 35, 0.42)), #23324b;
+    }
+
+    .arena-cell.spell-shadow {
+      background: linear-gradient(180deg, rgba(222, 202, 255, 0.2), rgba(64, 43, 121, 0.38)), #1a2445;
+    }
+
+    .arena-cell.spell-path {
+      background: linear-gradient(180deg, rgba(255, 232, 143, 0.18), rgba(58, 112, 178, 0.3)), #143256;
+    }
+
+    .arena-cell > * {
+      position: relative;
+      z-index: 1;
+    }
+
     .row-mark {
       color: #ffdf7b;
       text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
@@ -1506,6 +1567,21 @@
     .cell-item.heal {
       color: #99f0b5;
       text-shadow: 0 0 13px rgba(66, 226, 126, 0.95), 0 2px 0 rgba(0, 52, 25, 0.5);
+    }
+
+    .cell-item.spell {
+      color: #fff2a8;
+      text-shadow: 0 0 12px rgba(255, 226, 96, 0.9), 0 2px 0 rgba(0, 28, 60, 0.5);
+    }
+
+    .cell-item.spell.player {
+      color: #aee2ff;
+      text-shadow: 0 0 12px rgba(81, 190, 255, 0.96), 0 2px 0 rgba(0, 32, 73, 0.55);
+    }
+
+    .cell-item.spell.enemy {
+      color: #ffc2bc;
+      text-shadow: 0 0 12px rgba(255, 105, 100, 0.92), 0 2px 0 rgba(72, 0, 0, 0.5);
     }
 
     .arena-danmaku {
@@ -4527,8 +4603,9 @@ Vines|藤蔓
           const marker = rowMarker(row, lane.id);
           const items = cellItems(row, lane.id).map(item => `<span class="cell-item ${item.className}">${item.text}</span>`).join("");
           const detail = cellDetails(row, lane.id);
+          const spellClasses = spellCellClasses(row, lane.id);
           cells.push(`
-            <button class="arena-cell ${riverClass(row, lane.id)} ${result.ok ? "legal" : ""}"
+            <button class="arena-cell ${riverClass(row, lane.id)} ${spellClasses} ${result.ok ? "legal" : ""}"
               data-board-row="${row}" data-board-lane="${lane.id}"
               title="${escapeAttr(detail)}"
               aria-label="${escapeAttr(`${detail}${result.ok ? "；可下牌" : ""}`)}">
@@ -4602,6 +4679,17 @@ Vines|藤蔓
       return cellItems(row, lane).map(item => item.text).slice(0, 2).join(" ");
     }
 
+    function spellCellClasses(row, lane) {
+      if (!state?.effects?.length) return "";
+      const effects = state.effects.filter(effect => effect.kind === "spell" && spellCoversCell(effect, row, lane));
+      if (!effects.length) return "";
+      const latest = effects[effects.length - 1];
+      const sideClass = `spell-${sideColorClass(latest.side)}`;
+      const tone = latest.tone || "shadow";
+      const shape = effects.some(effect => effect.shape === "path") ? "spell-path" : `spell-${tone}`;
+      return `spell-area ${sideClass} ${shape}`;
+    }
+
     function cellDetails(row, lane) {
       const details = [];
       if (state.mode !== "touchdown") {
@@ -4619,6 +4707,7 @@ Vines|藤蔓
         details.push(`${sideName(unit.side)}的${cardName(unit.name)}${stateText ? `（${stateText}）` : ""}，血量 ${Math.max(0, Math.round(unit.hp))}/${unit.maxHp}${shieldText}`);
       });
       state.effects.forEach(effect => {
+        if (effect.kind === "spell" && spellCoversCell(effect, row, lane)) details.push(spellEffectDetail(effect));
         if (effect.kind === "beam" && beamCoversCell(effect, row, lane)) details.push("地狱塔/地狱飞龙一类的持续锁定光线经过这里");
         if (effect.kind === "hook" && beamCoversCell(effect, row, lane)) details.push(`${effect.label || "渔夫钩子"}经过这里`);
         if (effect.kind === "dash" && beamCoversCell(effect, row, lane)) details.push(`${effect.label || "冲刺路线"}经过这里`);
@@ -4683,6 +4772,9 @@ Vines|藤蔓
         }
       });
       state.effects.forEach(effect => {
+        if (effect.kind === "spell" && spellCoversCell(effect, row, lane)) {
+          parts.push({ className: `spell ${sideColorClass(effect.side)}`, text: `法:${effect.short || "术"}` });
+        }
         if (effect.kind === "beam" && beamCoversCell(effect, row, lane)) {
           parts.push({ className: "beam", text: "线:地狱" });
         }
@@ -4735,6 +4827,20 @@ Vines|藤蔓
 
     function blastCoversCell(effect, row, lane) {
       return areaDistance(effect.lane, effect.pos, lane, row) <= (effect.radius || 2.4);
+    }
+
+    function spellCoversCell(effect, row, lane) {
+      if (effect.shape === "path") {
+        return row >= effect.minPos && row <= effect.maxPos && laneInWidth(effect.lane, lane, effect.width || 2.4);
+      }
+      return blastCoversCell(effect, row, lane);
+    }
+
+    function spellEffectDetail(effect) {
+      const shapeText = effect.shape === "path"
+        ? `路径 ${Math.round(effect.minPos)}-${Math.round(effect.maxPos)} 行，宽 ${effect.width} 格`
+        : `半径 ${effect.radius} 格`;
+      return `${sideName(effect.side)}的${effect.label || cardName(effect.spell)}覆盖这里（${shapeText}）：${effect.detail || "按法术效果结算"}`;
     }
 
     function mapSide(side) {
@@ -5149,6 +5255,86 @@ Vines|藤蔓
       return normalizeRiverCell(unit);
     }
 
+    function rememberVisualEffect(effect, options = {}) {
+      state.effects.push(effect);
+      if (options.keepAfterClear !== false && state.queuedEffects) state.queuedEffects.push({ ...effect });
+    }
+
+    function showSpellAreaEffect(side, spell, lane, pos, radius, options = {}) {
+      rememberVisualEffect({
+        kind: "spell",
+        shape: "area",
+        side,
+        spell,
+        lane,
+        pos: clampPos(pos),
+        radius: radius || 2.4,
+        label: options.label || cardName(spell),
+        short: options.short || spellShortName(spell),
+        tone: options.tone || spellTone(spell),
+        detail: options.detail || spellEffectDescription(spell, options)
+      }, options);
+    }
+
+    function showSpellPathEffect(side, spell, lane, startPos, endPos, spec, options = {}) {
+      rememberVisualEffect({
+        kind: "spell",
+        shape: "path",
+        side,
+        spell,
+        lane,
+        pos: clampPos(startPos),
+        minPos: Math.min(startPos, endPos),
+        maxPos: Math.max(startPos, endPos),
+        width: spec.width,
+        label: options.label || cardName(spell),
+        short: options.short || spellShortName(spell),
+        tone: options.tone || "path",
+        detail: options.detail || spellEffectDescription(spell, options)
+      }, options);
+    }
+
+    function spellShortName(spell) {
+      const map = {
+        "Fireball": "火球", "Rocket": "火箭", "Arrows": "箭雨", "Poison": "毒",
+        "Freeze": "冰冻", "Lightning": "雷电", "Zap": "小电", "Giant Snowball": "雪球",
+        "Earthquake": "地震", "Rage": "狂暴", "Tornado": "飓风", "Goblin Curse": "诅咒",
+        "Vines": "藤蔓", "Void": "虚空", "The Log": "滚木", "Barbarian Barrel": "滚桶",
+        "Royal Delivery": "速递", "Clone": "克隆", "Graveyard": "墓园", "Goblin Barrel": "飞桶"
+      };
+      return map[spell] || cardName(spell).slice(0, 2);
+    }
+
+    function spellTone(spell) {
+      if (["Fireball", "Rocket", "Arrows", "Royal Delivery", "Goblin Barrel"].includes(spell)) return "fire";
+      if (["Freeze", "Zap", "Lightning", "Giant Snowball"].includes(spell)) return "frost";
+      if (["Poison", "Goblin Curse", "Vines"].includes(spell)) return "poison";
+      if (spell === "Rage") return "rage";
+      if (["Earthquake", "The Log", "Barbarian Barrel"].includes(spell)) return "earth";
+      return "shadow";
+    }
+
+    function spellEffectDescription(spell, options = {}) {
+      const notes = [];
+      if (options.damage) notes.push(`造成约 ${options.damage} 点伤害`);
+      if (options.towerDamage) notes.push("可蹭到防御塔");
+      if (options.groundOnly) notes.push("只影响地面目标");
+      if (options.knock) notes.push("带击退");
+      if (options.freeze) notes.push("造成冰冻");
+      if (options.stun) notes.push("造成短暂眩晕");
+      if (options.slow) notes.push("造成减速");
+      if (options.root) notes.push("造成禁锢");
+      if (options.poison) notes.push("持续伤害区域");
+      if (options.curse) notes.push("被击倒会转化为己方哥布林");
+      if (options.spawn) notes.push(options.spawn);
+      if (options.buff) notes.push(options.buff);
+      if (options.pull) notes.push("把单位向中心拉扯");
+      if (options.clone) notes.push("复制友方单位");
+      if (options.lightning) notes.push("优先劈中最多 3 个高血量目标");
+      if (options.void) notes.push("目标越少单体伤害越高");
+      return notes.join("，") || "按法术专属效果结算";
+    }
+
     function castSpell(side, card, place) {
       const enemy = side === "player" ? "enemy" : "player";
       const friendly = side;
@@ -5172,25 +5358,35 @@ Vines|藤蔓
       const area = spellAreas[spell] || { radius: 2.4, towerRatio: towerSpellRatio(spell) };
 
       if (spell === "Goblin Barrel") {
-        spawnMany(side, "Goblins", lane, place.custom ? targetPos : side === "player" ? 3.2 : 16.8, 3);
+        const landPos = place.custom ? targetPos : side === "player" ? 3.2 : 16.8;
+        showSpellAreaEffect(side, spell, lane, landPos, 1.45, { spawn: "落点生成 3 个哥布林", tone: "fire" });
+        spawnMany(side, "Goblins", lane, landPos, 3);
         return;
       }
       if (spell === "Graveyard") {
-        spawnMany(side, "Skeletons", lane, place.custom ? targetPos : side === "player" ? 3.2 : 16.8, 5, 0.65);
+        const gravePos = place.custom ? targetPos : side === "player" ? 3.2 : 16.8;
+        showSpellAreaEffect(side, spell, lane, gravePos, 3.0, { spawn: "区域内持续生成骷髅", tone: "shadow" });
+        spawnMany(side, "Skeletons", lane, gravePos, 5, 0.65);
         return;
       }
       if (spell === "The Log") {
-        rollPathDamage(side, lane, targetPos, spellDamage(spell, card.cost), lineSpells[spell], cardName(spell));
+        const damage = spellDamage(spell, card.cost);
+        const spec = lineSpells[spell];
+        const endPos = rollPathDamage(side, lane, targetPos, damage, spec, cardName(spell));
+        showSpellPathEffect(side, spell, lane, targetPos, endPos, spec, { damage, towerDamage: true, knock: spec.knock, tone: "earth" });
         return;
       }
       if (spell === "Barbarian Barrel") {
-        const endPos = rollPathDamage(side, lane, targetPos, 160, lineSpells[spell], cardName(spell));
+        const spec = lineSpells[spell];
+        const endPos = rollPathDamage(side, lane, targetPos, 160, spec, cardName(spell));
+        showSpellPathEffect(side, spell, lane, targetPos, endPos, spec, { damage: 160, towerDamage: true, knock: spec.knock, tone: "earth", spawn: "路径终点生成 1 个野蛮人" });
         const barb = createUnit(side, cardByName.get("Barbarians"), lane, endPos, { hp: 430, damage: 115 });
         barb.count = 1;
         state.units.push(barb);
         return;
       }
       if (spell === "Royal Delivery") {
+        showSpellAreaEffect(side, spell, lane, targetPos, 3.0, { damage: 260, towerDamage: true, knock: 0.35, tone: "fire", spawn: "落地后生成 1 个皇家卫兵" });
         areaDamage(side, lane, targetPos, 260, { radius: 3.0, knock: 0.35 });
         const recruit = createUnit(side, cardByName.get("Royal Recruits"), lane, targetPos + (side === "player" ? -0.4 : 0.4), { hp: 720, damage: 145 });
         recruit.count = 1;
@@ -5198,11 +5394,12 @@ Vines|藤蔓
         return;
       }
       if (spell === "Rage") {
-        applyRageArea(side, lane, targetPos, cardName(spell));
+        applyRageArea(side, lane, targetPos, cardName(spell), { keepAfterClear: true });
         return;
       }
       if (spell === "Clone") {
         const radius = 3.0;
+        showSpellAreaEffect(side, spell, lane, targetPos, radius, { clone: true, tone: "shadow" });
         const clones = state.units
           .filter(u => u.side === friendly && u.type !== "Building" && u.hp > 0 && areaDistance(lane, targetPos, u.lane, u.pos) <= radius)
           .slice(0, 5);
@@ -5210,11 +5407,13 @@ Vines|藤蔓
         return;
       }
       if (spell === "Freeze") {
+        showSpellAreaEffect(side, spell, lane, targetPos, area.radius, { damage: 95, towerDamage: true, freeze: true, tone: "frost" });
         areaDamage(side, lane, targetPos, 95, { radius: area.radius, freeze: 3 });
         damageTowersInArea(enemy, lane, targetPos, Math.round(95 * area.towerRatio), area.radius, cardName(spell));
         return;
       }
       if (spell === "Tornado") {
+        showSpellAreaEffect(side, spell, lane, targetPos, area.radius, { damage: 120, towerDamage: true, pull: true, tone: "frost" });
         const pulled = pullUnits(side, lane, targetPos, area.radius);
         areaDamage(side, lane, targetPos, 120, { radius: area.radius });
         damageTowersInArea(enemy, lane, targetPos, Math.round(120 * area.towerRatio), area.radius, cardName(spell));
@@ -5222,30 +5421,44 @@ Vines|藤蔓
         return;
       }
       if (spell === "Vines") {
+        showSpellAreaEffect(side, spell, lane, targetPos, area.radius, { damage: 180, towerDamage: true, root: true, tone: "poison" });
         areaDamage(side, lane, targetPos, 180, { radius: area.radius, root: 2 });
         damageTowersInArea(enemy, lane, targetPos, Math.round(180 * area.towerRatio), area.radius, cardName(spell));
         return;
       }
       if (spell === "Goblin Curse") {
+        showSpellAreaEffect(side, spell, lane, targetPos, area.radius, { damage: 55, towerDamage: true, curse: true, poison: true, tone: "poison" });
         areaDamage(side, lane, targetPos, 55, { radius: area.radius, curse: 5, curseBy: side, poisonTurns: 4, poisonDamage: 45 });
         damageTowersInArea(enemy, lane, targetPos, Math.round(55 * area.towerRatio), area.radius, cardName(spell));
         return;
       }
       if (spell === "Poison") {
+        showSpellAreaEffect(side, spell, lane, targetPos, area.radius, { damage: 105, towerDamage: true, poison: true, slow: true, tone: "poison" });
         areaDamage(side, lane, targetPos, 105, { radius: area.radius, poisonTurns: 4, poisonDamage: 75, slow: 2 });
         damageTowersInArea(enemy, lane, targetPos, Math.round(spellDamage(spell, card.cost) * area.towerRatio), area.radius, cardName(spell));
         return;
       }
       if (spell === "Lightning") {
+        showSpellAreaEffect(side, spell, lane, targetPos, area.radius, { damage: spellDamage(spell, card.cost), towerDamage: true, stun: true, lightning: true, tone: "frost" });
         lightningStrike(side, lane, targetPos, area.radius, spellDamage(spell, card.cost), area.towerRatio);
         return;
       }
       if (spell === "Void") {
+        showSpellAreaEffect(side, spell, lane, targetPos, area.radius, { towerDamage: true, void: true, tone: "shadow" });
         voidStrike(side, lane, targetPos, area.radius, area.towerRatio);
         return;
       }
 
       const damage = spellDamage(spell, card.cost);
+      showSpellAreaEffect(side, spell, lane, targetPos, area.radius, {
+        damage,
+        towerDamage: true,
+        groundOnly: area.groundOnly,
+        knock: area.knock,
+        stun: area.stun,
+        slow: area.slow,
+        tone: spellTone(spell)
+      });
       areaDamage(side, lane, targetPos, damage, {
         radius: area.radius,
         groundOnly: area.groundOnly,
@@ -5269,6 +5482,15 @@ Vines|藤蔓
     function applyRageArea(side, lane, pos, label = cardName("Rage"), options = {}) {
       const enemy = side === "player" ? "enemy" : "player";
       const area = spellAreas.Rage;
+      showSpellAreaEffect(side, "Rage", lane, pos, area.radius, {
+        label,
+        short: "狂",
+        damage: RAGE_DAMAGE,
+        towerDamage: true,
+        buff: `友方单位和建筑狂暴 ${RAGE_DURATION_TURNS} 回合`,
+        tone: "rage",
+        keepAfterClear: Boolean(options.keepAfterClear)
+      });
       const units = areaDamage(side, lane, pos, RAGE_DAMAGE, { radius: area.radius });
       const towers = damageTowersInArea(enemy, lane, pos, Math.round(RAGE_DAMAGE * area.towerRatio), area.radius, label);
       const buffed = buffFriendlyArea(side, lane, pos, area.radius, unit => {
