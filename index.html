@@ -1714,7 +1714,7 @@
               <div>
                 房间号：<span class="room-code" id="roomCodeDisplay">------</span>
               </div>
-              <div class="online-status" id="onlineStatus">在线双人使用点对点连接：房主创建房间，另一台设备输入房间号加入。</div>
+              <div class="online-status" id="onlineStatus">在线双人使用公网中继增强连接：房主创建房间，另一台设备输入房间号加入。</div>
             </div>
             <div class="editor-tabs" id="editorTabs">
               <button data-edit-side="player">编辑玩家A</button>
@@ -1809,7 +1809,30 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+  <script>
+    window.__peerCdnFallbacks = [
+      "https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.5/peerjs.min.js"
+    ];
+    window.__loadPeerFallback = function() {
+      if (window.Peer || window.__peerFallbackLoading) return;
+      const next = window.__peerCdnFallbacks && window.__peerCdnFallbacks.shift();
+      if (!next) return;
+      window.__peerFallbackLoading = true;
+      const script = document.createElement("script");
+      script.src = next;
+      script.onload = () => { window.__peerFallbackLoading = false; };
+      script.onerror = () => {
+        window.__peerFallbackLoading = false;
+        window.__loadPeerFallback();
+      };
+      document.head.appendChild(script);
+    };
+    window.setTimeout(() => {
+      if (!window.Peer) window.__loadPeerFallback();
+    }, 2500);
+  </script>
+  <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js" onerror="window.__loadPeerFallback && window.__loadPeerFallback()"></script>
   <script>
     const CARD_TEXT = `
 Knight|3|common
@@ -2633,6 +2656,7 @@ Vines|藤蔓
     let recentRandomDecks = [];
     let autoTimer = null;
     let onlineStartSyncTimer = null;
+    let onlineConnectWatchTimer = null;
     let online = {
       role: null,
       localSide: "player",
@@ -2643,7 +2667,7 @@ Vines|藤蔓
       connected: false,
       startAck: false,
       remoteDeck: [],
-      status: "在线双人使用点对点连接：房主创建房间，另一台设备输入房间号加入。"
+      status: "在线双人使用公网中继增强连接：房主创建房间，另一台设备输入房间号加入。"
     };
     const DEMO_SPEEDS = [
       { label: "0.5x", delay: 1600 },
@@ -2658,6 +2682,7 @@ Vines|藤蔓
     const SUDDEN_DEATH_START = 180;
     const COUNTDOWN_180_START = SUDDEN_DEATH_START - 10;
     const FINAL_COUNTDOWN_START = 290;
+    const ONLINE_CONNECT_TIMEOUT_MS = 18000;
     const AI_DIFFICULTIES = {
       easy: {
         label: "简单",
@@ -2864,6 +2889,29 @@ Vines|藤蔓
       updateOnlinePanel();
     }
 
+    function onlineRelayTroubleText() {
+      return "已启用公网中继，但连接仍未打开。请确认房主页面保持打开、房间号正确；如果双方都没问题，通常是当前网络或浏览器封锁 WebRTC / TURN 中继，换 Chrome、Safari、Edge 或切到另一种网络后重建房间。";
+    }
+
+    function clearOnlineConnectWatch() {
+      clearTimeout(onlineConnectWatchTimer);
+      onlineConnectWatchTimer = null;
+    }
+
+    function startOnlineConnectWatch(context = "connect") {
+      clearOnlineConnectWatch();
+      onlineConnectWatchTimer = setTimeout(() => {
+        if (online.connected || !online.conn) return;
+        const prefix = context === "host"
+          ? "检测到对手正在加入，但数据通道超时。"
+          : "连接房主超时。";
+        online.connected = false;
+        setOnlineStatus(`${prefix}${onlineRelayTroubleText()}`);
+        if (state?.mode === "online") renderBattle();
+        else renderSetup();
+      }, ONLINE_CONNECT_TIMEOUT_MS);
+    }
+
     function updateOnlinePanel() {
       const panel = el("onlinePanel");
       if (!panel) return;
@@ -2873,7 +2921,8 @@ Vines|藤蔓
 
     function ensurePeerJs() {
       if (window.Peer) return true;
-      setOnlineStatus("在线连接库没有加载成功。请确认当前设备可以访问互联网，然后刷新页面再试。");
+      if (window.__loadPeerFallback) window.__loadPeerFallback();
+      setOnlineStatus("在线连接库还没有加载成功，正在尝试备用线路。请等待几秒后再点一次；如果仍失败，请确认当前设备可以访问互联网。");
       return false;
     }
 
@@ -2889,6 +2938,22 @@ Vines|藤蔓
       return `text-royale-room-${code}`;
     }
 
+    function turnRelayServers() {
+      const credential = {
+        username: "openrelayproject",
+        credential: "openrelayproject"
+      };
+      return [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:global.stun.twilio.com:3478" },
+        { urls: "stun:openrelay.metered.ca:80" },
+        { urls: "turn:openrelay.metered.ca:80", ...credential },
+        { urls: "turn:openrelay.metered.ca:443", ...credential },
+        { urls: "turn:openrelay.metered.ca:443?transport=tcp", ...credential },
+        { urls: "turns:openrelay.metered.ca:443?transport=tcp", ...credential }
+      ];
+    }
+
     function peerOptions() {
       return {
         host: "0.peerjs.com",
@@ -2898,10 +2963,8 @@ Vines|藤蔓
         key: "peerjs",
         debug: 1,
         config: {
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:global.stun.twilio.com:3478" }
-          ]
+          iceServers: turnRelayServers(),
+          iceCandidatePoolSize: 10
         }
       };
     }
@@ -2919,17 +2982,17 @@ Vines|藤蔓
       const message = err?.message || "";
       const raw = message || type || "未知错误";
       const map = {
-        "browser-incompatible": "当前浏览器不支持点对点连接，请换 Chrome、Safari 或 Edge 最新版。",
+        "browser-incompatible": "当前浏览器不支持在线联机连接，请换 Chrome、Safari 或 Edge 最新版。",
         "disconnected": "已从房间服务器断开，请重新创建或加入房间。",
         "invalid-id": "房间号格式无效，请重新创建房间。",
-        "invalid-key": "点对点大厅服务暂时不可用，请稍后再试。",
-        "network": "网络无法连接到点对点大厅。请确认两台设备都能访问互联网，并刷新页面重试。",
+        "invalid-key": "在线大厅服务暂时不可用，请稍后再试。",
+        "network": "网络无法连接到在线大厅或公网中继。请确认两台设备都能访问互联网，并刷新页面重试。",
         "peer-unavailable": "没有找到这个房间。请确认房主页面仍然打开，并且房间号没有输错。",
-        "server-error": "点对点大厅服务器返回错误，请稍后重试。",
-        "socket-error": "与点对点大厅的连接失败，可能是网络、防火墙或浏览器限制。",
-        "socket-closed": "与点对点大厅的连接已关闭，请重新创建或加入房间。",
+        "server-error": "在线大厅服务器返回错误，请稍后重试。",
+        "socket-error": "与在线大厅的连接失败，可能是网络、防火墙或浏览器限制。",
+        "socket-closed": "与在线大厅的连接已关闭，请重新创建或加入房间。",
         "unavailable-id": "这个房间号暂时被占用，请房主重新创建一个房间。",
-        "webrtc": "两台设备之间的点对点通道建立失败，可能是网络 NAT 或防火墙限制。"
+        "webrtc": "两台设备之间的 WebRTC 通道建立失败，已尝试公网中继但仍被网络或浏览器限制。"
       };
       return map[type] || raw;
     }
@@ -2947,6 +3010,7 @@ Vines|藤蔓
         if (online.peer) online.peer.destroy();
       } catch {}
       clearOnlineStartSync();
+      clearOnlineConnectWatch();
       online = {
         role: null,
         localSide: "player",
@@ -2986,7 +3050,7 @@ Vines|藤蔓
       peer.on("open", () => {
         if (online.peer !== peer) return;
         online.peerOpen = true;
-        setOnlineStatus("你已作为玩家A进入房间。把房间号发给另一台设备，然后等待玩家B加入。");
+        setOnlineStatus("你已作为玩家A进入房间。已启用公网中继增强连接，把房间号发给另一台设备，然后等待玩家B加入。");
         renderSetup();
       });
       peer.on("connection", conn => {
@@ -3048,7 +3112,7 @@ Vines|藤蔓
       peer.on("open", () => {
         if (online.peer !== peer) return;
         online.peerOpen = true;
-        setOnlineStatus("已进入在线大厅，正在连接房主。");
+        setOnlineStatus("已进入在线大厅，正在通过直连或公网中继连接房主。");
         const conn = peer.connect(onlinePeerId(code), { reliable: true });
         setupOnlineConnection(conn);
       });
@@ -3077,10 +3141,12 @@ Vines|藤蔓
 
     function setupOnlineConnection(conn) {
       online.conn = conn;
+      startOnlineConnectWatch(online.role === "host" ? "host" : "guest");
       conn.on("open", () => {
         if (online.conn !== conn) return;
+        clearOnlineConnectWatch();
         online.connected = true;
-        setOnlineStatus(online.role === "host" ? "对手已加入。双方都选满 8 张卡后，房主可以开始。" : "已加入房间。选满 8 张卡后等待房主开始。");
+        setOnlineStatus(online.role === "host" ? "对手已通过公网中继/直连通道加入。双方都选满 8 张卡后，房主可以开始。" : "已加入房间。选满 8 张卡后等待房主开始。");
         onlineSendDeck();
         if (online.role === "host" && state?.mode === "online" && !state.gameOver) scheduleOnlineStartSync();
         renderSetup();
@@ -3091,14 +3157,16 @@ Vines|藤蔓
       });
       conn.on("close", () => {
         if (online.conn !== conn) return;
+        clearOnlineConnectWatch();
         online.connected = false;
         setOnlineStatus(online.role === "host" ? "玩家B已断开。房主仍在房间里，可以等待对方重新加入。" : "与房主的连接已断开，请重新加入房间。");
         renderSetup();
       });
       conn.on("error", err => {
         if (online.conn !== conn) return;
+        clearOnlineConnectWatch();
         online.connected = false;
-        setOnlineStatus(`连接错误：${describePeerError(err)}`);
+        setOnlineStatus(`连接错误：${describePeerError(err)} ${onlineRelayTroubleText()}`);
         renderSetup();
       });
     }
@@ -7363,7 +7431,7 @@ Vines|藤蔓
       if (!btn) return;
       gameMode = btn.dataset.mode;
       if (isSinglePlayerSetupMode()) editingSide = "player";
-      if (gameMode === "online") setOnlineStatus("在线双人使用点对点连接：房主创建房间，另一台设备输入房间号加入。");
+      if (gameMode === "online") setOnlineStatus("在线双人使用公网中继增强连接：房主创建房间，另一台设备输入房间号加入。");
       saveSetup();
       renderSetup();
     });
