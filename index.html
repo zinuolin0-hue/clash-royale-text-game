@@ -2462,7 +2462,7 @@ Vines|藤蔓
     const airNames = set(["Minions", "Balloon", "Minion Horde", "Baby Dragon", "Lava Hound", "Inferno Dragon", "Mega Minion", "Bats", "Skeleton Barrel", "Flying Machine", "Skeleton Dragons", "Electro Dragon", "Phoenix", "Spirit Empress"]);
     const airHitOverrides = set(["Ice Spirit", "Fire Spirit", "Electro Spirit", "Heal Spirit"]);
     const buildingTargeters = set(["Giant", "Golem", "Balloon", "Hog Rider", "Royal Giant", "Lava Hound", "Battle Ram", "Ice Golem", "Ram Rider", "Skeleton Barrel", "Wall Breakers", "Royal Hogs", "Goblin Giant", "Elixir Golem", "Electro Giant", "Rune Giant"]);
-    const rangedNames = set(["Archers", "Musketeer", "Baby Dragon", "Witch", "Wizard", "Spear Goblins", "Ice Wizard", "Princess", "Three Musketeers", "Inferno Dragon", "Mega Minion", "Dart Goblin", "Electro Wizard", "Hunter", "Executioner", "Rascals", "Zappies", "Flying Machine", "Magic Archer", "Electro Dragon", "Firecracker", "Archer Queen", "Mother Witch", "Electro Spirit", "Phoenix", "Little Prince", "Goblin Machine", "Goblinstein", "Skeleton Dragons", "Minions", "Minion Horde", "Bats", "Spirit Empress"]);
+    const rangedNames = set(["Archers", "Musketeer", "Baby Dragon", "Witch", "Wizard", "Spear Goblins", "Ice Wizard", "Princess", "Three Musketeers", "Inferno Dragon", "Mega Minion", "Dart Goblin", "Electro Wizard", "Hunter", "Executioner", "Rascals", "Zappies", "Sparky", "Flying Machine", "Magic Archer", "Electro Dragon", "Firecracker", "Archer Queen", "Mother Witch", "Electro Spirit", "Phoenix", "Little Prince", "Goblin Machine", "Goblinstein", "Skeleton Dragons", "Minions", "Minion Horde", "Bats", "Spirit Empress"]);
     const splashNames = set(["Valkyrie", "Bomber", "Baby Dragon", "Wizard", "Witch", "Dark Prince", "Sparky", "Bowler", "Executioner", "Mega Knight", "Firecracker", "Electro Wizard", "Electro Dragon", "Skeleton King", "Golden Knight", "Monk", "Electro Giant", "Goblin Demolisher", "Goblinstein", "Boss Bandit", "Bomb Tower", "Mortar", "Furnace"]);
     const swarmNames = set(["Archers", "Goblins", "Minions", "Barbarians", "Skeletons", "Skeleton Army", "Spear Goblins", "Minion Horde", "Guards", "Three Musketeers", "Goblin Gang", "Elite Barbarians", "Royal Recruits", "Bats", "Zappies", "Rascals", "Skeleton Dragons", "Royal Hogs"]);
     const fastNames = set(["Goblins", "Hog Rider", "Prince", "Battle Ram", "Lumberjack", "Bandit", "Bats", "Royal Ghost", "Ram Rider", "Wall Breakers", "Royal Hogs", "Elite Barbarians", "Fire Spirit", "Ice Spirit", "Electro Spirit", "Heal Spirit", "Berserker", "Boss Bandit"]);
@@ -2527,6 +2527,7 @@ Vines|藤蔓
     const FISHERMAN_HOOK_TIME_SECONDS = 1.5;
     const FISHERMAN_HOOK_SLOW_SECONDS = 1.5;
     const FISHERMAN_HOOK_SLOW_FACTOR = 0.7;
+    const SPARKY_CHARGE_SECONDS = 4.0;
     const PHOENIX_EGG_SECONDS = 3.8;
     const PHOENIX_EGG_HP = 317;
     const PHOENIX_DEATH_DAMAGE = 150;
@@ -2541,6 +2542,14 @@ Vines|藤蔓
       "Boss Bandit": { min: 3.5, max: 6.0, damageScale: 1.35, minDamage: 650, towerRatio: 0.45, landingGap: 0.55 }
     };
     const banditDashCards = set(Object.keys(banditDashProfiles));
+    const electricStunAttackers = set(["Electro Wizard", "Zappies", "Electro Dragon", "Electro Spirit"]);
+    const chargeProfiles = {
+      "Prince": { distance: 2.0, damageScale: 2.0, minDamage: 620 },
+      "Dark Prince": { distance: 3.0, damageScale: 2.0, minDamage: 360, knock: 0.25 },
+      "Ram Rider": { distance: 2.0, damageScale: 1.85, minDamage: 520 },
+      "Battle Ram": { distance: 3.0, damageScale: 1.75, minDamage: 310, knock: 0.35 }
+    };
+    const chargeCards = set(Object.keys(chargeProfiles));
 
     const rarityBonus = { common: 0, rare: 35, epic: 75, legendary: 115, champion: 145 };
     const countMap = {
@@ -2615,6 +2624,9 @@ Vines|藤蔓
       if (card.name === "Elixir Golem") return ["只看建筑", "二段分裂", "送对手圣水"];
       if (card.name === "Phoenix") return ["死亡成蛋", "蛋可被打", "倒计时复活"];
       if (card.name === "Miner") return ["全场部署", "潜行奇袭", "地面近战"];
+      if (electricStunAttackers.has(card.name)) return ["电击眩晕", "打断冲锋", "重置蓄能"];
+      if (card.name === "Sparky") return ["蓄能开炮", "范围伤害", "可被电击重置", "不防空"];
+      if (chargeCards.has(card.name)) return ["冲锋蓄势", "冲锋加伤", "可被电击打断"];
       if (CHAMPION_ABILITIES[card.name]) return ["英雄技能", `${CHAMPION_ABILITIES[card.name].cost}费`, CHAMPION_ABILITIES[card.name].label];
       if (card.type === "Spell") {
         const badges = [ownHalfOnlySpells.has(card.name) ? "己方半场" : "全场法术"];
@@ -2726,6 +2738,13 @@ Vines|藤蔓
         rows.push(["登场治疗", `半径 ${BATTLE_HEALER_DEPLOY_RADIUS} · ${BATTLE_HEALER_DEPLOY_HEAL} 点`]);
         rows.push(["攻击治疗", `半径 ${BATTLE_HEALER_ATTACK_RADIUS} · ${BATTLE_HEALER_ATTACK_HEAL} 点`]);
       }
+      if (card.name === "Sparky") rows.push(["蓄能时间", `约 ${SPARKY_CHARGE_SECONDS} 秒，按当前阶段换算为回合`]);
+      if (chargeProfiles[card.name]) {
+        const cfg = chargeProfiles[card.name];
+        rows.push(["冲锋距离", `连续前进约 ${cfg.distance} 格后进入冲锋`]);
+        rows.push(["冲锋伤害", `约 ${Math.round((cfg.damageScale - 1) * 100)}% 额外伤害`]);
+      }
+      if (electricStunAttackers.has(card.name)) rows.push(["电击控制", "每次命中眩晕 1 次行动，并重置蓄能/冲锋"]);
       if (card.name === "Ice Golem") rows.push(["死亡冰爆", `半径 ${ICE_GOLEM_DEATH_RADIUS} · ${ICE_GOLEM_DEATH_DAMAGE} 点 · 减速 ${ICE_GOLEM_DEATH_SLOW_TURNS} 回合`]);
       if (card.name === "Elixir Golem") rows.push(["死亡奖励", `本体 ${ELIXIR_GOLEM_REWARD} 圣水，小体/泡泡各 ${ELIXIR_GOLEMITE_REWARD} 圣水`]);
       if (card.name === "Phoenix") {
@@ -2825,6 +2844,9 @@ Vines|藤蔓
       if (card.name === "Battle Healer") notes.push(`战斗天使登场时会释放一圈治疗光环，攻击命中后也会在自身周围释放治疗；治疗只作用于友方部队，不会治疗建筑、防御塔或已满血单位。她保留 Hover 越河特性，但仍是地面近战单位，不能攻击空中目标。`);
       if (card.name === "Ice Golem") notes.push(`戈仑冰人只锁定建筑；死亡后会在小范围内造成冰爆伤害，并让敌方单位减速 ${ICE_GOLEM_DEATH_SLOW_TURNS} 回合，适合拉扯后拖慢反打。`);
       if (card.name === "Phoenix") notes.push(`凤凰第一次被击倒时会爆炸并变成${cardName("Phoenix Egg")}。蛋有 ${PHOENIX_EGG_HP} 点生命，按官方 ${PHOENIX_EGG_SECONDS} 秒孵化时间换算为当前阶段回合数；如果没有被破坏，会原地复活一只凤凰。`);
+      if (card.name === "Sparky") notes.push(`电磁炮需要先蓄能，官方约 ${SPARKY_CHARGE_SECONDS} 秒后才能开炮；本平台按当前圣水阶段换算为回合，蓄能被电击、眩晕或冲锋打断时会清零。`);
+      if (electricStunAttackers.has(card.name)) notes.push("电系攻击命中后会让敌方单位跳过下一次攻击和移动，并重置电磁炮蓄能、地狱递增射线、王子系冲锋和刺客冲刺准备。");
+      if (chargeProfiles[card.name]) notes.push(`连续向敌方方向前进约 ${chargeProfiles[card.name].distance} 格后进入冲锋，下一次命中造成额外冲锋伤害；被电击眩晕、拉扯或反向移动会打断冲锋蓄势。`);
       if (banditDashCards.has(card.name)) notes.push("前方 3.5 到 6 格有可攻击的地面单位或防御塔、且身边没有近战目标时，会先进入“冲刺”状态；冲刺准备阶段不会受到伤害，下一次行动会冲到目标面前并造成冲撞伤害。");
       if (card.name === "Lumberjack") notes.push("狂暴樵夫死亡时会在原地掉落狂暴法术，造成少量范围伤害，并让范围内友方单位和建筑进入狂暴。");
       if (card.name === "Elixir Collector") notes.push("圣水收集器不攻击，每隔数回合为己方额外生成圣水。");
@@ -2892,6 +2914,9 @@ Vines|藤蔓
       if (card.name === "Battle Healer") notes.push("战斗天使的登场治疗、攻击治疗、Hover 越河和不治疗建筑按官方卡牌说明与平衡资料换算；治疗数值显示为本平台实战结算值。");
       if (card.name === "Ice Golem") notes.push("戈仑冰人的死亡伤害和减速按官方死亡冰爆机制换算为小范围伤害与短时减速。");
       if (card.name === "Phoenix") notes.push(`凤凰按官方死亡成蛋、蛋未破坏则复活机制处理；蛋血量采用 2026 年 3 月平衡后的 ${PHOENIX_EGG_HP}，孵化时间 ${PHOENIX_EGG_SECONDS} 秒按当前圣水阶段换算为回合。`);
+      if (card.name === "Sparky") notes.push(`电磁炮按官方约 ${SPARKY_CHARGE_SECONDS} 秒蓄能机制处理：未蓄满时不会开炮，蓄满后发射高伤害范围炮击；电击类攻击会重置蓄能。`);
+      if (electricStunAttackers.has(card.name)) notes.push("闪电法师、电击车小队等电系单位的普通攻击按官方眩晕/重置逻辑换算为一次行动跳过，并会打断电磁炮、地狱射线和冲锋。");
+      if (chargeProfiles[card.name]) notes.push("王子、黑暗王子、蛮羊骑士等冲锋单位参考官方冲锋距离和平衡公告，在文字棋盘中用连续前进距离蓄势，命中后按平台化伤害加成结算。");
       if (card.name === "Elixir Golem") notes.push("圣水戈仑的三段形态、2→4 分裂和给对手总计 4 点圣水的风险收益按官方机制做成本平台化结算。");
       if (card.name === "Cannon Cart") notes.push(`加农炮战车按破盾后变成固定建筑炮台的机制处理，固定形态寿命以约 ${CANNON_CART_BUILDING_SECONDS} 秒换算为当前比赛阶段回合数。`);
       if (card.name === "Witch") notes.push("女巫的骷髅召唤按公开卡牌资料中的 4 个骷髅、约 7 秒一轮处理，并保留登场后的首次快速召唤。");
@@ -2921,12 +2946,14 @@ Vines|藤蔓
       if (seed.name === "Magic Archer") damage = Math.round(damage * 0.72);
       let range = isRanged ? 3.1 : 0.9;
       if (["Princess", "Magic Archer", "Dart Goblin", "Firecracker", "X-Bow", "Mortar"].includes(seed.name)) range = seed.name === "X-Bow" ? 8.4 : seed.name === "Mortar" ? 8.0 : seed.name === "Magic Archer" ? 6.8 : 4.7;
+      if (seed.name === "Sparky") range = 4.6;
       if (["Inferno Tower", "Tesla"].includes(seed.name)) range = 4.4;
       if (seed.name === "Cannon") range = 3.8;
       if (diesOnAttackNames.has(seed.name)) range = seed.name === "Skeleton Barrel" ? 0.9 : 1.25;
       const speed = type === "Building" ? 0 : slowNames.has(seed.name) ? 0.72 : fastNames.has(seed.name) ? 1.55 : 1.05;
       const attacks = type !== "Spell" && !noAttackBuildings.has(seed.name);
-      const canHitAir = type === "Spell" || airHitOverrides.has(seed.name) || (type === "Building" ? buildingAirAttackers.has(seed.name) : !isBuildingTargeter && (isAir || isRanged));
+      let canHitAir = type === "Spell" || airHitOverrides.has(seed.name) || (type === "Building" ? buildingAirAttackers.has(seed.name) : !isBuildingTargeter && (isAir || isRanged));
+      if (seed.name === "Sparky") canHitAir = false;
       const canHitGround = type !== "Building" || attacks;
       const spawner = spawnerProfiles[seed.name] || {};
       const shieldHp = shieldedNames.has(seed.name) ? Math.max(120, Math.round(hp / Math.max(1, count) * 0.7)) : 0;
@@ -5323,6 +5350,9 @@ Vines|藤蔓
       if (unit.phoenixEgg) return "蛋";
       if (unit.type === "Building") return "筑";
       if (unit.banditDashCharging) return "冲";
+      if (unit.chargeReady) return "冲";
+      if ((unit.sparkyCharge || 0) > 0) return "蓄";
+      if ((unit.stunAction || 0) > 0 || (unit.stunMove || 0) > 0) return "晕";
       if (unit.cloaked > 0 || unit.banditStealth > 0) return "隐";
       if (unit.monkProtection > 0) return "护";
       if (unit.goblinsteinLink > 0) return "链";
@@ -5366,7 +5396,7 @@ Vines|藤蔓
       });
       state.effects.forEach(effect => {
         if (effect.kind === "spell" && spellCoversCell(effect, row, lane)) details.push(spellEffectDetail(effect));
-        if (effect.kind === "beam" && beamCoversCell(effect, row, lane)) details.push("地狱塔/地狱飞龙一类的持续锁定光线经过这里");
+        if (effect.kind === "beam" && beamCoversCell(effect, row, lane)) details.push(`${effect.label || "地狱塔/地狱飞龙一类的持续锁定光线"}经过这里`);
         if (effect.kind === "hook" && beamCoversCell(effect, row, lane)) details.push(`${effect.label || "渔夫钩子"}经过这里`);
         if (effect.kind === "dash" && beamCoversCell(effect, row, lane)) details.push(`${effect.label || "冲刺路线"}经过这里`);
         if (effect.kind === "pierce" && beamCoversCell(effect, row, lane)) details.push(`${effect.label || "蓝色穿透箭"}经过这里`);
@@ -5395,6 +5425,10 @@ Vines|藤蔓
       if (unit.isAir) states.push("空中");
       else states.push("地面");
       if (unit.banditDashCharging) states.push("冲刺准备/免伤");
+      if (unit.chargeReady) states.push("冲锋已蓄势");
+      else if ((unit.chargeDistance || 0) > 0 && chargeProfiles[unit.name]) states.push(`冲锋蓄势 ${unit.chargeDistance.toFixed(1)}/${chargeProfiles[unit.name].distance}`);
+      if (unit.name === "Sparky") states.push(`电磁炮蓄能 ${unit.sparkyCharge || 0}/${sparkyChargeTurns()}`);
+      if ((unit.stunAction || 0) > 0 || (unit.stunMove || 0) > 0) states.push("电击眩晕/跳过行动");
       if (unit.cloaked > 0 || unit.banditStealth > 0) states.push("隐身");
       if (unit.monkProtection > 0) states.push("护体");
       if (unit.goblinsteinLink > 0) states.push("电链");
@@ -5426,7 +5460,7 @@ Vines|藤蔓
         const displayLane = unitDisplayLane(unit);
         if (Math.round(unit.pos) === row && laneOccupiesCell(displayLane, lane) && unit.hp > 0) {
           const kind = unitStateMark(unit);
-          const name = unit.banditDashCharging ? `${cardName(unit.name)}(冲刺)` : cardName(unit.name);
+          const name = unit.banditDashCharging ? `${cardName(unit.name)}(冲刺)` : unit.chargeReady ? `${cardName(unit.name)}(冲锋)` : cardName(unit.name);
           parts.push({ className: sideColorClass(unit.side), text: `${mapSide(unit.side)}${kind}:${name}` });
         }
       });
@@ -5435,7 +5469,7 @@ Vines|藤蔓
           parts.push({ className: `spell ${sideColorClass(effect.side)}`, text: `法:${effect.short || "术"}` });
         }
         if (effect.kind === "beam" && beamCoversCell(effect, row, lane)) {
-          parts.push({ className: "beam", text: "线:地狱" });
+          parts.push({ className: "beam", text: `线:${effect.short || "地狱"}` });
         }
         if (effect.kind === "hook" && beamCoversCell(effect, row, lane)) {
           parts.push({ className: "beam", text: `钩:${effect.short || "渔"}` });
@@ -5886,6 +5920,12 @@ Vines|藤蔓
         banditStealth: 0,
         banditDashCharging: false,
         banditDashDodgedTurn: 0,
+        chargeDistance: 0,
+        chargeReady: false,
+        chargeLogged: false,
+        stunAction: 0,
+        stunMove: 0,
+        sparkyCharge: card.name === "Sparky" ? 0 : 0,
         abilityCooldown: 0,
         missileCooldown: card.name === "Goblin Machine" ? 0 : 0,
         fishermanHookCooldown: 0,
@@ -6177,7 +6217,7 @@ Vines|藤蔓
         const bonus = options.buildingBonus && unit.type === "Building" ? options.buildingBonus : 1;
         damageUnit(unit, Math.round(damage * bonus));
         if (options.knock) knockUnitFrom(unit, pos, options.knock);
-        if (options.stun) unit.frozen = Math.max(unit.frozen, options.stun);
+        if (options.stun) applyStun(unit, options.stun, options.source || "电击");
         if (options.freeze) unit.frozen = Math.max(unit.frozen, options.freeze);
         if (options.slow) {
           unit.slowed = Math.max(unit.slowed, options.slow);
@@ -6340,6 +6380,7 @@ Vines|藤蔓
     function knockUnitFrom(unit, centerPos, amount) {
       const dir = unit.pos <= centerPos ? -1 : 1;
       unit.pos = clampPos(unit.pos + dir * amount);
+      resetChargeState(unit);
       normalizeRiverCell(unit);
     }
 
@@ -7274,9 +7315,11 @@ Vines|藤蔓
       const acting = shuffle(state.units.filter(unit => unit.hp > 0));
       acting.forEach(unit => {
         if (unit.hp <= 0 || unit.frozen > 0 || !unit.attacks) return;
+        if (consumeStun(unit, "action")) return;
         if (resolveBanditDash(unit)) return;
         if (resolveFishermanHook(unit)) return;
         if (unit.name === "Goblin Machine") launchGoblinMachineMissile(unit);
+        if (resolveSparkyCharge(unit)) return;
         const target = findTarget(unit);
         if (!target) return;
         if (unit.diesOnAttack) {
@@ -7290,6 +7333,37 @@ Vines|藤蔓
         const damage = attackDamage(unit, target);
         dealDamage(unit, target, damage);
       });
+    }
+
+    function consumeStun(unit, kind) {
+      const key = kind === "move" ? "stunMove" : "stunAction";
+      if ((unit[key] || 0) <= 0) return false;
+      unit[key] = Math.max(0, unit[key] - 1);
+      if (kind === "action") log(`${sideName(unit.side)}的 ${cardName(unit.name)} 被电击眩晕，错过本次攻击。`);
+      return true;
+    }
+
+    function resolveSparkyCharge(unit) {
+      if (unit.name !== "Sparky") return false;
+      const required = sparkyChargeTurns();
+      unit.sparkyCharge = Math.min(required, (unit.sparkyCharge || 0) + 1);
+      const target = findTarget(unit);
+      if (!target) return false;
+      if (unit.sparkyCharge < required) {
+        state.effects.push({ kind: "beam", fromLane: unit.lane, fromPos: unit.pos, toLane: target.lane, toPos: target.pos, label: `${cardName(unit.name)}蓄能瞄准`, short: "蓄" });
+        log(`${sideName(unit.side)}的 ${cardName(unit.name)} 正在蓄能（${unit.sparkyCharge}/${required}），暂不开炮。`);
+        return true;
+      }
+      unit.sparkyCharge = 0;
+      const damage = attackDamage(unit, target);
+      dealDamage(unit, target, damage);
+      state.effects.push({ kind: "blast", lane: target.lane, pos: target.pos, radius: 1.65, label: `${cardName(unit.name)}炮击`, short: "电磁" });
+      log(`${sideName(unit.side)}的 ${cardName(unit.name)} 蓄能完成，轰出高伤害电磁炮。`);
+      return true;
+    }
+
+    function sparkyChargeTurns(time = state?.time ?? 0) {
+      return Math.max(1, Math.ceil(SPARKY_CHARGE_SECONDS / phaseInfo(time).seconds));
     }
 
     function resolveFishermanHook(unit) {
@@ -7308,6 +7382,7 @@ Vines|藤蔓
       if (target.type === "Building") {
         unit.lane = target.lane;
         moveUnitTo(unit, target.pos - dir * 0.58);
+        resetChargeState(unit);
         unit.targetId = target.id;
         state.effects.push({
           kind: "hook",
@@ -7324,6 +7399,7 @@ Vines|藤蔓
 
       target.lane = unit.lane;
       moveUnitTo(target, unit.pos + dir * 0.62);
+      resetChargeState(target);
       target.slowed = Math.max(target.slowed || 0, durationTurns(FISHERMAN_HOOK_SLOW_SECONDS));
       target.slowFactor = FISHERMAN_HOOK_SLOW_FACTOR;
       target.targetId = targetable(target, unit) && !target.isBuildingTargeter ? unit.id : target.targetId;
@@ -7494,6 +7570,13 @@ Vines|藤蔓
     function attackDamage(unit, target) {
       let damage = Math.round(unit.damage * (unit.rage > 0 ? RAGE_ATTACK_MULTIPLIER : 1));
       if (unit.queenBoost > 0) damage = Math.round(damage * 2.45);
+      unit.didChargeThisAttack = false;
+      const charge = chargeProfiles[unit.name];
+      if (charge && unit.chargeReady) {
+        damage = Math.max(charge.minDamage, Math.round(damage * charge.damageScale));
+        unit.didChargeThisAttack = true;
+        state.effects.push({ kind: "dash", fromLane: unit.lane, fromPos: unit.pos, toLane: target.lane, toPos: target.pos, label: `${cardName(unit.name)}冲锋路线`, short: "冲" });
+      }
       if (infernoBeamNames.has(unit.name)) {
         if (unit.infernoTargetId === target.id) unit.infernoCharge = Math.min(3, (unit.infernoCharge || 0) + 1);
         else {
@@ -7783,6 +7866,38 @@ Vines|藤蔓
       return { hpDamage: dealt, shieldDamage: 0 };
     }
 
+    function applyStun(unit, turns = 1, source = "电击") {
+      if (!unit || unit.hp <= 0) return false;
+      const count = Math.max(1, Math.round(turns));
+      unit.stunAction = Math.max(unit.stunAction || 0, count);
+      unit.stunMove = Math.max(unit.stunMove || 0, count);
+      const interrupted = resetInterruptibleState(unit);
+      if (interrupted.length) {
+        log(`${sideName(unit.side)}的 ${cardName(unit.name)} 被${source}眩晕，${interrupted.join("、")}被打断。`);
+      }
+      return true;
+    }
+
+    function resetInterruptibleState(unit) {
+      const interrupted = [];
+      if ((unit.sparkyCharge || 0) > 0) interrupted.push("电磁炮蓄能");
+      if ((unit.infernoCharge || 0) > 0) interrupted.push("递增射线");
+      if (unit.banditDashCharging) interrupted.push("冲刺准备");
+      if (chargeProfiles[unit.name] && ((unit.chargeDistance || 0) > 0 || unit.chargeReady)) interrupted.push("冲锋蓄势");
+      unit.sparkyCharge = 0;
+      unit.infernoCharge = 0;
+      unit.infernoTargetId = null;
+      unit.banditDashCharging = false;
+      unit.banditDashDodgedTurn = 0;
+      resetChargeState(unit);
+      return interrupted;
+    }
+
+    function maybeApplyAttackStun(attacker, target) {
+      if (!electricStunAttackers.has(attacker.name) || !target || target.kind === "tower" || target.hp <= 0) return;
+      applyStun(target, 1, cardName(attacker.name));
+    }
+
     function activateKingTower(side, reason) {
       if (state.mode === "touchdown") return;
       const king = state.towers[side]?.king;
@@ -7797,19 +7912,38 @@ Vines|藤蔓
       if (target.kind === "tower") {
         damageTower(target, target.side, damage, `${cardName(attacker.name)} 攻击`);
         if (attacker.name === "Battle Healer") battleHealerAttackHeal(attacker);
+        finishChargeAttack(attacker, target);
         return;
       }
       damageUnit(target, damage, { attacker });
+      maybeApplyAttackStun(attacker, target);
       if (attacker.isSplash) {
         const enemy = attacker.side === "player" ? "enemy" : "player";
         state.units.forEach(unit => {
           if (unit === target || unit.side !== enemy || unit.hp <= 0) return;
           if (laneCompatible(unit.lane, target.lane) && Math.abs(unit.pos - target.pos) <= 1.6 && targetable(attacker, unit)) {
             damageUnit(unit, Math.round(damage * 0.45), { attacker });
+            maybeApplyAttackStun(attacker, unit);
           }
         });
       }
       if (attacker.name === "Battle Healer") battleHealerAttackHeal(attacker);
+      finishChargeAttack(attacker, target);
+    }
+
+    function finishChargeAttack(attacker, target) {
+      if (!attacker.didChargeThisAttack) return;
+      const cfg = chargeProfiles[attacker.name];
+      if (cfg?.knock && target && target.kind !== "tower" && target.hp > 0) knockUnitFrom(target, attacker.pos, cfg.knock);
+      log(`${sideName(attacker.side)}的 ${cardName(attacker.name)} 冲锋命中${targetLabel(target)}，造成额外冲锋伤害。`);
+      resetChargeState(attacker);
+      attacker.didChargeThisAttack = false;
+    }
+
+    function targetLabel(target) {
+      if (!target) return "目标";
+      if (target.kind === "tower") return `${sideName(target.side)}的${towerDisplayName(target)}`;
+      return `${sideName(target.side)}的${cardName(target.name)}`;
     }
 
     function resolveImpactAttack(unit, target) {
@@ -7819,6 +7953,7 @@ Vines|藤蔓
       const baseDamage = Math.round(unit.damage * (unit.rage > 0 ? RAGE_ATTACK_MULTIPLIER : 1));
       const name = unit.name;
       let message = "";
+      let chargeImpact = false;
 
       if (name === "Ice Spirit") {
         const damage = Math.max(65, Math.round(baseDamage * 0.75));
@@ -7847,10 +7982,11 @@ Vines|藤蔓
         damageTowersInArea(enemy, lane, pos, damage, 1.8, cardName(name));
         message = `${sideName(unit.side)}的 ${cardName(name)} 撞上目标并爆炸。`;
       } else if (name === "Battle Ram") {
-        const damage = Math.max(310, Math.round(baseDamage * 1.75));
+        chargeImpact = Boolean(unit.chargeReady);
+        const damage = chargeImpact ? Math.max(310, Math.round(baseDamage * 1.75)) : Math.max(170, Math.round(baseDamage * 1.05));
         areaDamage(unit.side, lane, pos, damage, { radius: 1.3, knock: 0.35 });
         damageTowersInArea(enemy, lane, pos, damage, 1.3, cardName(name));
-        message = `${sideName(unit.side)}的 ${cardName(name)} 完成冲撞。`;
+        message = chargeImpact ? `${sideName(unit.side)}的 ${cardName(name)} 完成蓄势冲撞。` : `${sideName(unit.side)}的 ${cardName(name)} 撞上目标，但还没有完全蓄势。`;
       } else if (name === "Skeleton Barrel") {
         const damage = Math.max(120, Math.round(baseDamage * 0.65));
         areaDamage(unit.side, lane, pos, damage, { radius: 1.6 });
@@ -7868,6 +8004,7 @@ Vines|藤蔓
 
       const payload = releaseDeathPayload(unit, lane, pos);
       if (message) log(message);
+      if (chargeImpact) resetChargeState(unit);
       if (payload) log(payload);
       unit.impactSpent = true;
       unit.hp = 0;
@@ -7881,7 +8018,7 @@ Vines|藤蔓
         .slice(0, 8);
       targets.forEach(target => {
         damageUnit(target, damage, { attacker: unit });
-        target.frozen = Math.max(target.frozen, 1);
+        applyStun(target, 1, cardName(unit.name));
       });
     }
 
@@ -8103,6 +8240,7 @@ Vines|藤蔓
     function moveUnits() {
       state.units.forEach(unit => {
         if (unit.hp <= 0 || unit.type === "Building" || unit.frozen > 0 || unit.rooted > 0) return;
+        if (consumeStun(unit, "move")) return;
         if (unit.banditDashCharging) return;
         if (findTarget(unit)) return;
         if (resolveFishermanHook(unit)) return;
@@ -8122,7 +8260,9 @@ Vines|藤蔓
 
     function moveForward(unit) {
       const dir = unit.side === "player" ? -1 : 1;
+      const before = unit.pos;
       moveUnitTo(unit, unit.pos + dir * unitStepSpeed(unit));
+      trackChargeMovement(unit, before, unit.pos);
     }
 
     function moveTowardTarget(unit, target) {
@@ -8133,10 +8273,39 @@ Vines|藤蔓
       const gap = target.pos - unit.pos;
       const minGap = Math.max(0.35, unit.range * 0.45);
       if (Math.abs(gap) > minGap) {
+        const before = unit.pos;
         const step = Math.sign(gap) * Math.min(Math.abs(gap), unitStepSpeed(unit));
         moveUnitTo(unit, unit.pos + step);
+        trackChargeMovement(unit, before, unit.pos);
       }
       normalizeRiverCell(unit);
+    }
+
+    function trackChargeMovement(unit, fromPos, toPos) {
+      const cfg = chargeProfiles[unit.name];
+      if (!cfg || unit.frozen > 0 || unit.rooted > 0) return;
+      const forwardDir = unit.side === "player" ? -1 : 1;
+      const forwardDelta = (toPos - fromPos) * forwardDir;
+      if (forwardDelta <= 0.05) {
+        resetChargeState(unit);
+        return;
+      }
+      unit.chargeDistance = (unit.chargeDistance || 0) + forwardDelta;
+      if (unit.chargeDistance >= cfg.distance && !unit.chargeReady) {
+        unit.chargeReady = true;
+        if (!unit.chargeLogged) {
+          unit.chargeLogged = true;
+          state.effects.push({ kind: "dash", fromLane: unit.lane, fromPos, toLane: unit.lane, toPos, label: `${cardName(unit.name)}进入冲锋`, short: "冲" });
+          log(`${sideName(unit.side)}的 ${cardName(unit.name)} 已连续前进 ${cfg.distance} 格，进入冲锋状态。`);
+        }
+      }
+    }
+
+    function resetChargeState(unit) {
+      if (!unit) return;
+      unit.chargeDistance = 0;
+      unit.chargeReady = false;
+      unit.chargeLogged = false;
     }
 
     function laneStepToward(fromLane, toLane) {
