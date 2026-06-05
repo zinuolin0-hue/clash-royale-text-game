@@ -1717,16 +1717,16 @@
     .arena-cell {
       min-height: 0;
       height: 100%;
-      border: 1px solid rgba(246, 237, 176, 0.34);
+      border: 1px solid rgba(255, 238, 158, 0.64);
       position: relative;
       overflow: hidden;
       background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.08)),
-        rgba(46, 144, 53, 0.34);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.16)),
+        rgba(43, 139, 49, 0.72);
       color: #e8f4ff;
       font-family: "Trebuchet MS", "Microsoft YaHei", "PingFang SC", sans-serif;
-      font-weight: 800;
-      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+      font-weight: 900;
+      text-shadow: 0 2px 0 rgba(0, 0, 0, 0.64);
       grid-template-columns: 18px minmax(0, 1fr);
       gap: 2px;
       padding: 1px 2px;
@@ -1736,12 +1736,16 @@
 
     .arena-cell:hover:not(:disabled) {
       border-color: #f3c34a;
-      background: rgba(27, 71, 120, 0.66);
+      background:
+        linear-gradient(180deg, rgba(255, 245, 168, 0.2), rgba(0, 0, 0, 0.16)),
+        rgba(28, 86, 132, 0.86);
     }
 
     .arena-cell.legal {
       border-color: #6bc2ff;
-      background: rgba(17, 63, 111, 0.58);
+      background:
+        linear-gradient(180deg, rgba(110, 211, 255, 0.2), rgba(0, 0, 0, 0.14)),
+        rgba(18, 81, 139, 0.82);
     }
 
     .arena-cell.selected-target {
@@ -1753,13 +1757,15 @@
     .arena-cell.river {
       border-color: #65caff;
       background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.13), transparent 45%),
-        rgba(13, 95, 158, 0.7);
+        linear-gradient(135deg, rgba(255, 255, 255, 0.22), transparent 45%),
+        rgba(13, 95, 158, 0.88);
     }
 
     .arena-cell.bridge {
       border-color: #caa36b;
-      background: rgba(126, 86, 37, 0.72);
+      background:
+        linear-gradient(180deg, rgba(255, 218, 132, 0.14), rgba(0, 0, 0, 0.12)),
+        rgba(126, 86, 37, 0.9);
     }
 
     .arena-cell.neutral {
