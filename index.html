@@ -2517,8 +2517,8 @@ Vines|藤蔓
     const PLACEMENTS = [
       { id: "kingLeft", label: "国王塔左侧", lane: "L", playerPos: 16.2, enemyPos: 3.8, kind: "safe" },
       { id: "kingRight", label: "国王塔右侧", lane: "R", playerPos: 16.2, enemyPos: 3.8, kind: "safe" },
-      { id: "leftBridge", label: "左侧桥头", lane: "L", playerPos: 10.8, enemyPos: 9.2, kind: "bridge" },
-      { id: "rightBridge", label: "右侧桥头", lane: "R", playerPos: 10.8, enemyPos: 9.2, kind: "bridge" },
+      { id: "leftBridge", label: "左中桥头", lane: "LL", playerPos: 10.8, enemyPos: 9.2, kind: "bridge" },
+      { id: "rightBridge", label: "右中桥头", lane: "RR", playerPos: 10.8, enemyPos: 9.2, kind: "bridge" },
       { id: "middle", label: "半场中间", lane: "M", playerPos: 14.2, enemyPos: 5.8, kind: "middle" }
     ];
     const LANES = [
@@ -5337,8 +5337,8 @@ Vines|藤蔓
         rows.push(`${marker}│${body}│`);
         if (state.mode !== "touchdown" && row === 10) {
           const riverLabels = LANES.map(lane => {
-            if (lane.id === "L") return "左桥";
-            if (lane.id === "R") return "右桥";
+            if (lane.id === "LL") return "左桥";
+            if (lane.id === "RR") return "右桥";
             return "河道";
           });
           rows.push(`  ├${riverLabels.map(label => fitText(label, colWidth, "─")).join("┼")}┤`);
@@ -5458,7 +5458,7 @@ Vines|藤蔓
     }
 
     function isBridgeLane(lane) {
-      return lane === "L" || lane === "R";
+      return lane === "LL" || lane === "RR";
     }
 
     function isRiverLane(lane) {
@@ -8518,9 +8518,13 @@ Vines|藤蔓
 
     function riverExitLane(unit) {
       const sideLane = laneToSide(unit.lane);
-      if (sideLane) return sideLane;
+      if (sideLane) return bridgeLaneForSide(sideLane);
       const enemy = unit.side === "player" ? "enemy" : "player";
-      return chooseWeakLane(enemy);
+      return bridgeLaneForSide(chooseWeakLane(enemy));
+    }
+
+    function bridgeLaneForSide(sideLane) {
+      return sideLane === "L" ? "LL" : "RR";
     }
 
     function spawnFromBuildings() {
