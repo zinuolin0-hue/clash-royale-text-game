@@ -4711,13 +4711,13 @@ Vines|藤蔓
         towers: {
           player: {
             king: tower("player", "K", "M", 19),
-            left: tower("player", "L公主", "L", 17),
-            right: tower("player", "R公主", "R", 17)
+            left: tower("player", "L公主", "LL", 17),
+            right: tower("player", "R公主", "RR", 17)
           },
           enemy: {
             king: tower("enemy", "K", "M", 1),
-            left: tower("enemy", "L公主", "L", 3),
-            right: tower("enemy", "R公主", "R", 3)
+            left: tower("enemy", "L公主", "LL", 3),
+            right: tower("enemy", "R公主", "RR", 3)
           }
         },
         log: []
@@ -7043,8 +7043,9 @@ Vines|藤蔓
     }
 
     function spellPlacementForTower(towerObj) {
-      if (towerObj.lane === "L") return PLACEMENTS.find(p => p.id === "leftBridge") || PLACEMENTS[2];
-      if (towerObj.lane === "R") return PLACEMENTS.find(p => p.id === "rightBridge") || PLACEMENTS[3];
+      const sideLane = laneToSide(towerObj.lane);
+      if (sideLane === "L") return PLACEMENTS.find(p => p.id === "leftBridge") || PLACEMENTS[2];
+      if (sideLane === "R") return PLACEMENTS.find(p => p.id === "rightBridge") || PLACEMENTS[3];
       return PLACEMENTS.find(p => p.id === "middle") || PLACEMENTS[4];
     }
 
@@ -7849,8 +7850,9 @@ Vines|藤蔓
     function towerTargetFor(unit, side) {
       if (state.mode === "touchdown") return null;
       const towers = state.towers[side];
-      if (unit.lane === "L" || unit.lane === "ML") return towers.left.hp > 0 ? towers.left : towers.king;
-      if (unit.lane === "R" || unit.lane === "MR") return towers.right.hp > 0 ? towers.right : towers.king;
+      const sideLane = laneToSide(unit.lane);
+      if (sideLane === "L") return towers.left.hp > 0 ? towers.left : towers.king;
+      if (sideLane === "R") return towers.right.hp > 0 ? towers.right : towers.king;
       const weak = weakestPrincess(side);
       return weak.hp > 0 ? weak : towers.king;
     }
