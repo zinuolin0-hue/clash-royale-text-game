@@ -2231,6 +2231,11 @@ Vines|藤蔓
     const ELIXIR_GOLEMITE_REWARD = 0.5;
     const ELIXIR_BLOB_REWARD = 0.5;
     const CANNON_CART_BUILDING_SECONDS = 15;
+    const FISHERMAN_HOOK_MIN_RANGE = 3.5;
+    const FISHERMAN_HOOK_MAX_RANGE = 7.0;
+    const FISHERMAN_HOOK_TIME_SECONDS = 1.5;
+    const FISHERMAN_HOOK_SLOW_SECONDS = 1.5;
+    const FISHERMAN_HOOK_SLOW_FACTOR = 0.7;
     const lineSpells = {
       "The Log": { length: 10.1, width: 3.9, knock: 0.9, towerRatio: 0.15 },
       "Barbarian Barrel": { length: 4.5, width: 2.6, knock: 0.45, towerRatio: 0.20 }
@@ -2308,6 +2313,7 @@ Vines|藤蔓
       if (card.name === "Guards") return ["3人单位", "带盾", "地面", "不防空"];
       if (card.name === "Goblin Machine") return ["近战手臂", "导弹预瞄", "可防空"];
       if (card.name === "Magic Archer") return ["远射程", "穿透箭", "蓝线显示", "可防空"];
+      if (card.name === "Fisherman") return ["钩子拉扯", "只钩地面", "短暂减速"];
       if (card.name === "Battle Healer") return ["登场治疗", "攻击治疗", "Hover越河", "不疗建筑"];
       if (card.name === "Ice Golem") return ["只看建筑", "死亡冰爆", "范围减速"];
       if (card.name === "Elixir Golem") return ["只看建筑", "二段分裂", "送对手圣水"];
@@ -2415,6 +2421,10 @@ Vines|藤蔓
       }
       rows.push(["射程", card.attacks ? card.range : "无攻击"]);
       if (card.name === "Magic Archer") rows.push(["穿透箭路", `约 ${MAGIC_ARCHER_PROJECTILE_RANGE} 格 · 宽 ${MAGIC_ARCHER_PROJECTILE_WIDTH} 格`]);
+      if (card.name === "Fisherman") {
+        rows.push(["钩子视野", `${FISHERMAN_HOOK_MIN_RANGE} - ${FISHERMAN_HOOK_MAX_RANGE} 格，只钩地面目标`]);
+        rows.push(["钩子前摇", `约 ${FISHERMAN_HOOK_TIME_SECONDS} 秒，命中后减速约 ${FISHERMAN_HOOK_SLOW_SECONDS} 秒`]);
+      }
       if (card.name === "Battle Healer") {
         rows.push(["登场治疗", `半径 ${BATTLE_HEALER_DEPLOY_RADIUS} · ${BATTLE_HEALER_DEPLOY_HEAL} 点`]);
         rows.push(["攻击治疗", `半径 ${BATTLE_HEALER_ATTACK_RADIUS} · ${BATTLE_HEALER_ATTACK_HEAL} 点`]);
@@ -2465,6 +2475,7 @@ Vines|藤蔓
       if (!card.attacks) return "不主动攻击";
       if (card.name === "Goblin Machine") return "近战手臂打地面；导弹预瞄远处目标";
       if (card.name === "Magic Archer") return "远程锁定目标；蓝色穿透箭沿直线继续命中";
+      if (card.name === "Fisherman") return `近战打地面；${FISHERMAN_HOOK_MIN_RANGE}-${FISHERMAN_HOOK_MAX_RANGE} 格内会用钩子拉扯地面目标`;
       if (banditDashCards.has(card.name)) return "近战打地面；前方 3.5 到 6 格可进入冲刺";
       return card.isBuildingTargeter ? "只锁定建筑" : "优先附近敌方单位或建筑";
     }
@@ -2509,6 +2520,7 @@ Vines|藤蔓
       if (card.name === "Miner") notes.push("掘地矿工可以全场部署到任意陆地格，直接从目标位置钻出，用于偷塔、吸引火力或切后排；他仍是地面近战单位，不能放在河道水格。");
       if (card.name === "Goblin Machine") notes.push("哥布林机甲的普通手臂是近战地面攻击；火箭发射器会预瞄 2.5 到 5 格内的空中或地面目标当前位置，下回合落点爆炸，目标离开落点就会落空。");
       if (card.name === "Magic Archer") notes.push(`神箭游侠的箭会穿透目标并沿直线继续飞行；本平台按约 7 格锁定射程、${MAGIC_ARCHER_PROJECTILE_RANGE} 格投射距离换算，直线和斜线都会用蓝色线显示，路径上的敌方单位与防御塔都会受伤。`);
+      if (card.name === "Fisherman") notes.push(`渔夫发现 ${FISHERMAN_HOOK_MIN_RANGE}-${FISHERMAN_HOOK_MAX_RANGE} 格内的地面敌方目标时，会原地甩出钩子。普通部队会被拉到渔夫面前并短暂减速；建筑目标会把渔夫拉到建筑面前。`);
       if (card.name === "Battle Healer") notes.push(`战斗天使登场时会释放一圈治疗光环，攻击命中后也会在自身周围释放治疗；治疗只作用于友方部队，不会治疗建筑、防御塔或已满血单位。她保留 Hover 越河特性，但仍是地面近战单位，不能攻击空中目标。`);
       if (card.name === "Ice Golem") notes.push(`戈仑冰人只锁定建筑；死亡后会在小范围内造成冰爆伤害，并让敌方单位减速 ${ICE_GOLEM_DEATH_SLOW_TURNS} 回合，适合拉扯后拖慢反打。`);
       if (banditDashCards.has(card.name)) notes.push("前方 3.5 到 6 格有可攻击的地面单位或防御塔、且身边没有近战目标时，会先进入“冲刺”状态；冲刺准备阶段不会受到伤害，下一次行动会冲到目标面前并造成冲撞伤害。");
@@ -2574,6 +2586,7 @@ Vines|藤蔓
       if (card.name === "Miner") notes.push("掘地矿工的全场部署按官方潜行部署机制处理；在本平台中允许部署到双方半场的任意陆地格。");
       if (card.name === "Bomb Tower") notes.push("炸弹塔死亡炸弹参考原作 3 秒延迟，在文字版中换算为当前阶段回合数。");
       if (card.name === "Magic Archer") notes.push("神箭游侠的 7 格射程、穿透箭和约 11 格投射距离按公开卡牌数据换算为文字棋盘：锁定目标后沿射击方向继续判定路径命中。");
+      if (card.name === "Fisherman") notes.push(`渔夫按钩子最小 ${FISHERMAN_HOOK_MIN_RANGE} 格、最大 ${FISHERMAN_HOOK_MAX_RANGE} 格、约 ${FISHERMAN_HOOK_TIME_SECONDS} 秒出钩换算；命中后用短暂减速表现原作钩中后的控制效果。`);
       if (card.name === "Battle Healer") notes.push("战斗天使的登场治疗、攻击治疗、Hover 越河和不治疗建筑按官方卡牌说明与平衡资料换算；治疗数值显示为本平台实战结算值。");
       if (card.name === "Ice Golem") notes.push("戈仑冰人的死亡伤害和减速按官方死亡冰爆机制换算为小范围伤害与短时减速。");
       if (card.name === "Elixir Golem") notes.push("圣水戈仑的三段形态、2→4 分裂和给对手总计 4 点圣水的风险收益按官方机制做成本平台化结算。");
@@ -4607,6 +4620,7 @@ Vines|藤蔓
       });
       state.effects.forEach(effect => {
         if (effect.kind === "beam" && beamCoversCell(effect, row, lane)) details.push("地狱塔/地狱飞龙一类的持续锁定光线经过这里");
+        if (effect.kind === "hook" && beamCoversCell(effect, row, lane)) details.push(`${effect.label || "渔夫钩子"}经过这里`);
         if (effect.kind === "dash" && beamCoversCell(effect, row, lane)) details.push(`${effect.label || "冲刺路线"}经过这里`);
         if (effect.kind === "pierce" && beamCoversCell(effect, row, lane)) details.push(`${effect.label || "蓝色穿透箭"}经过这里`);
         if (effect.kind === "heal" && blastCoversCell(effect, row, lane)) details.push(`${effect.label || "治疗光环"}覆盖这里，只治疗友方部队`);
@@ -4671,6 +4685,9 @@ Vines|藤蔓
       state.effects.forEach(effect => {
         if (effect.kind === "beam" && beamCoversCell(effect, row, lane)) {
           parts.push({ className: "beam", text: "线:地狱" });
+        }
+        if (effect.kind === "hook" && beamCoversCell(effect, row, lane)) {
+          parts.push({ className: "beam", text: `钩:${effect.short || "渔"}` });
         }
         if (effect.kind === "dash" && beamCoversCell(effect, row, lane)) {
           parts.push({ className: "beam", text: `冲:${effect.short || "刺"}` });
@@ -5096,6 +5113,7 @@ Vines|藤蔓
         rooted: 0,
         jumping: 0,
         slowed: 0,
+        slowFactor: 0,
         cloaked: 0,
         queenBoost: 0,
         monkProtection: 0,
@@ -5105,6 +5123,7 @@ Vines|藤蔓
         banditDashDodgedTurn: 0,
         abilityCooldown: 0,
         missileCooldown: card.name === "Goblin Machine" ? 0 : 0,
+        fishermanHookCooldown: 0,
         abilityUses: 0,
         souls: 0,
         abilitySummon: Boolean(overrides.abilitySummon),
@@ -5279,7 +5298,10 @@ Vines|藤蔓
         if (options.knock) knockUnitFrom(unit, pos, options.knock);
         if (options.stun) unit.frozen = Math.max(unit.frozen, options.stun);
         if (options.freeze) unit.frozen = Math.max(unit.frozen, options.freeze);
-        if (options.slow) unit.slowed = Math.max(unit.slowed, options.slow);
+        if (options.slow) {
+          unit.slowed = Math.max(unit.slowed, options.slow);
+          unit.slowFactor = options.slowFactor || unit.slowFactor || 0.55;
+        }
         if (options.root) unit.rooted = Math.max(unit.rooted, options.root);
         if (options.poisonTurns) {
           unit.poisoned = Math.max(unit.poisoned, options.poisonTurns);
@@ -6209,12 +6231,14 @@ Vines|藤蔓
         if (unit.rooted > 0) unit.rooted--;
         if (unit.jumping > 0) unit.jumping--;
         if (unit.slowed > 0) unit.slowed--;
+        if (unit.slowed <= 0) unit.slowFactor = 0;
         if (unit.cloaked > 0) unit.cloaked--;
         if (unit.queenBoost > 0) unit.queenBoost--;
         if (unit.monkProtection > 0) unit.monkProtection--;
         if (unit.banditStealth > 0) unit.banditStealth--;
         if (unit.abilityCooldown > 0) unit.abilityCooldown--;
         if (unit.missileCooldown > 0) unit.missileCooldown--;
+        if (unit.fishermanHookCooldown > 0) unit.fishermanHookCooldown--;
         if (unit.goblinsteinLink > 0) {
           zapGoblinsteinLink(unit);
           unit.goblinsteinLink--;
@@ -6314,6 +6338,7 @@ Vines|藤蔓
       acting.forEach(unit => {
         if (unit.hp <= 0 || unit.frozen > 0 || !unit.attacks) return;
         if (resolveBanditDash(unit)) return;
+        if (resolveFishermanHook(unit)) return;
         if (unit.name === "Goblin Machine") launchGoblinMachineMissile(unit);
         const target = findTarget(unit);
         if (!target) return;
@@ -6328,6 +6353,73 @@ Vines|藤蔓
         const damage = attackDamage(unit, target);
         dealDamage(unit, target, damage);
       });
+    }
+
+    function resolveFishermanHook(unit) {
+      if (unit.name !== "Fisherman" || unit.fishermanHookCooldown > 0 || unit.rooted > 0 || unit.type === "Building") return false;
+      if (findTarget(unit)) return false;
+      const target = findFishermanHookTarget(unit);
+      if (!target) return false;
+      const fromLane = unit.lane;
+      const fromPos = unit.pos;
+      const targetFromLane = target.lane;
+      const targetFromPos = target.pos;
+      const dir = unit.side === "player" ? -1 : 1;
+      const hookTurns = cooldownTurns(FISHERMAN_HOOK_TIME_SECONDS);
+      unit.fishermanHookCooldown = hookTurns;
+
+      if (target.type === "Building") {
+        unit.lane = target.lane;
+        moveUnitTo(unit, target.pos - dir * 0.58);
+        unit.targetId = target.id;
+        state.effects.push({
+          kind: "hook",
+          fromLane,
+          fromPos,
+          toLane: targetFromLane,
+          toPos: targetFromPos,
+          label: `${cardName(unit.name)}钩子`,
+          short: "渔钩"
+        });
+        log(`${sideName(unit.side)}的 ${cardName(unit.name)} 钩住${sideName(target.side)}的${cardName(target.name)}，把自己拉到建筑面前。`);
+        return true;
+      }
+
+      target.lane = unit.lane;
+      moveUnitTo(target, unit.pos + dir * 0.62);
+      target.slowed = Math.max(target.slowed || 0, durationTurns(FISHERMAN_HOOK_SLOW_SECONDS));
+      target.slowFactor = FISHERMAN_HOOK_SLOW_FACTOR;
+      target.targetId = targetable(target, unit) && !target.isBuildingTargeter ? unit.id : target.targetId;
+      unit.targetId = target.id;
+      state.effects.push({
+        kind: "hook",
+        fromLane,
+        fromPos,
+        toLane: targetFromLane,
+        toPos: targetFromPos,
+        label: `${cardName(unit.name)}钩子`,
+        short: "渔钩"
+      });
+      log(`${sideName(unit.side)}的 ${cardName(unit.name)} 原地甩钩，把${sideName(target.side)}的${cardName(target.name)}拉到面前，并造成短暂减速。`);
+      return true;
+    }
+
+    function findFishermanHookTarget(unit) {
+      const enemy = unit.side === "player" ? "enemy" : "player";
+      return state.units
+        .filter(target => {
+          if (target.side !== enemy || target.hp <= 0 || target.isAir) return false;
+          if (!canUnitTarget(unit, target)) return false;
+          const dist = areaDistance(unit.lane, unit.pos, target.lane, target.pos);
+          return dist >= FISHERMAN_HOOK_MIN_RANGE && dist <= FISHERMAN_HOOK_MAX_RANGE;
+        })
+        .map(target => ({
+          target,
+          dist: areaDistance(unit.lane, unit.pos, target.lane, target.pos),
+          laneGap: laneDistance(unit.lane, target.lane),
+          hp: target.hp
+        }))
+        .sort((a, b) => a.dist - b.dist || a.laneGap - b.laneGap || a.hp - b.hp)[0]?.target || null;
     }
 
     function resolveBanditDash(unit) {
@@ -7055,6 +7147,7 @@ Vines|藤蔓
         if (unit.hp <= 0 || unit.type === "Building" || unit.frozen > 0 || unit.rooted > 0) return;
         if (unit.banditDashCharging) return;
         if (findTarget(unit)) return;
+        if (resolveFishermanHook(unit)) return;
         if (prepareBanditDash(unit)) return;
         const chase = findChaseTarget(unit);
         if (chase) {
@@ -7066,7 +7159,7 @@ Vines|藤蔓
     }
 
     function unitStepSpeed(unit) {
-      return unit.speed * (unit.rage > 0 ? RAGE_MOVE_MULTIPLIER : 1) * (unit.slowed > 0 ? 0.55 : 1);
+      return unit.speed * (unit.rage > 0 ? RAGE_MOVE_MULTIPLIER : 1) * (unit.slowed > 0 ? (unit.slowFactor || 0.55) : 1);
     }
 
     function moveForward(unit) {
