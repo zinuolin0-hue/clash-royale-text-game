@@ -4908,10 +4908,16 @@ Vines|藤蔓
       }
       const selfSide = viewerSide();
       const foeSide = opponentSideOf(selfSide);
-      const sides = [
-        [foeSide, sideName(foeSide)],
-        [selfSide, sideName(selfSide)]
-      ];
+      const fixedABOrder = state.mode === "demo" || state.mode === "duel" || state.mode === "online";
+      const sides = fixedABOrder
+        ? [
+            ["player", sideName("player")],
+            ["enemy", sideName("enemy")]
+          ]
+        : [
+            [foeSide, sideName(foeSide)],
+            [selfSide, sideName(selfSide)]
+          ];
       el("towerStrip").innerHTML = sides.map(([side, label]) => {
         const tw = state.towers[side];
         return `
