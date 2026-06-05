@@ -2262,6 +2262,7 @@ Mother Witch|女巫婆婆
 Electro Spirit|雷电精灵
 Electro Giant|雷电巨人
 Phoenix|凤凰
+Phoenix Egg|凤凰蛋
 Little Prince|小王子
 Goblin Demolisher|哥布林爆破手
 Goblin Machine|哥布林机甲
@@ -2458,6 +2459,11 @@ Vines|藤蔓
     const FISHERMAN_HOOK_TIME_SECONDS = 1.5;
     const FISHERMAN_HOOK_SLOW_SECONDS = 1.5;
     const FISHERMAN_HOOK_SLOW_FACTOR = 0.7;
+    const PHOENIX_EGG_SECONDS = 3.8;
+    const PHOENIX_EGG_HP = 317;
+    const PHOENIX_DEATH_DAMAGE = 150;
+    const PHOENIX_DEATH_TOWER_DAMAGE = 50;
+    const PHOENIX_DEATH_RADIUS = 1.8;
     const lineSpells = {
       "The Log": { length: 10.1, width: 3.9, knock: 0.9, towerRatio: 0.15 },
       "Barbarian Barrel": { length: 4.5, width: 2.6, knock: 0.45, towerRatio: 0.20 }
@@ -2539,6 +2545,7 @@ Vines|藤蔓
       if (card.name === "Battle Healer") return ["登场治疗", "攻击治疗", "Hover越河", "不疗建筑"];
       if (card.name === "Ice Golem") return ["只看建筑", "死亡冰爆", "范围减速"];
       if (card.name === "Elixir Golem") return ["只看建筑", "二段分裂", "送对手圣水"];
+      if (card.name === "Phoenix") return ["死亡成蛋", "蛋可被打", "倒计时复活"];
       if (card.name === "Miner") return ["全场部署", "潜行奇袭", "地面近战"];
       if (CHAMPION_ABILITIES[card.name]) return ["英雄技能", `${CHAMPION_ABILITIES[card.name].cost}费`, CHAMPION_ABILITIES[card.name].label];
       if (card.type === "Spell") {
@@ -2653,6 +2660,10 @@ Vines|藤蔓
       }
       if (card.name === "Ice Golem") rows.push(["死亡冰爆", `半径 ${ICE_GOLEM_DEATH_RADIUS} · ${ICE_GOLEM_DEATH_DAMAGE} 点 · 减速 ${ICE_GOLEM_DEATH_SLOW_TURNS} 回合`]);
       if (card.name === "Elixir Golem") rows.push(["死亡奖励", `本体 ${ELIXIR_GOLEM_REWARD} 圣水，小体/泡泡各 ${ELIXIR_GOLEMITE_REWARD} 圣水`]);
+      if (card.name === "Phoenix") {
+        rows.push(["凤凰蛋", `生命 ${PHOENIX_EGG_HP} · ${PHOENIX_EGG_SECONDS} 秒孵化`]);
+        rows.push(["死亡爆炸", `半径 ${PHOENIX_DEATH_RADIUS} · ${PHOENIX_DEATH_DAMAGE} 点`]);
+      }
       rows.push(["速度", card.type === "Building" ? "固定建筑" : speedText(card.speed)]);
       rows.push(["攻击目标", targetRule(card)]);
       rows.push(["命中能力", hitRule(card)]);
@@ -2745,6 +2756,7 @@ Vines|藤蔓
       if (card.name === "Fisherman") notes.push(`渔夫发现 ${FISHERMAN_HOOK_MIN_RANGE}-${FISHERMAN_HOOK_MAX_RANGE} 格内的地面敌方目标时，会原地甩出钩子。普通部队会被拉到渔夫面前并短暂减速；建筑目标会把渔夫拉到建筑面前。`);
       if (card.name === "Battle Healer") notes.push(`战斗天使登场时会释放一圈治疗光环，攻击命中后也会在自身周围释放治疗；治疗只作用于友方部队，不会治疗建筑、防御塔或已满血单位。她保留 Hover 越河特性，但仍是地面近战单位，不能攻击空中目标。`);
       if (card.name === "Ice Golem") notes.push(`戈仑冰人只锁定建筑；死亡后会在小范围内造成冰爆伤害，并让敌方单位减速 ${ICE_GOLEM_DEATH_SLOW_TURNS} 回合，适合拉扯后拖慢反打。`);
+      if (card.name === "Phoenix") notes.push(`凤凰第一次被击倒时会爆炸并变成${cardName("Phoenix Egg")}。蛋有 ${PHOENIX_EGG_HP} 点生命，按官方 ${PHOENIX_EGG_SECONDS} 秒孵化时间换算为当前阶段回合数；如果没有被破坏，会原地复活一只凤凰。`);
       if (banditDashCards.has(card.name)) notes.push("前方 3.5 到 6 格有可攻击的地面单位或防御塔、且身边没有近战目标时，会先进入“冲刺”状态；冲刺准备阶段不会受到伤害，下一次行动会冲到目标面前并造成冲撞伤害。");
       if (card.name === "Lumberjack") notes.push("狂暴樵夫死亡时会在原地掉落狂暴法术，造成少量范围伤害，并让范围内友方单位和建筑进入狂暴。");
       if (card.name === "Elixir Collector") notes.push("圣水收集器不攻击，每隔数回合为己方额外生成圣水。");
@@ -2811,6 +2823,7 @@ Vines|藤蔓
       if (card.name === "Fisherman") notes.push(`渔夫按钩子最小 ${FISHERMAN_HOOK_MIN_RANGE} 格、最大 ${FISHERMAN_HOOK_MAX_RANGE} 格、约 ${FISHERMAN_HOOK_TIME_SECONDS} 秒出钩换算；命中后用短暂减速表现原作钩中后的控制效果。`);
       if (card.name === "Battle Healer") notes.push("战斗天使的登场治疗、攻击治疗、Hover 越河和不治疗建筑按官方卡牌说明与平衡资料换算；治疗数值显示为本平台实战结算值。");
       if (card.name === "Ice Golem") notes.push("戈仑冰人的死亡伤害和减速按官方死亡冰爆机制换算为小范围伤害与短时减速。");
+      if (card.name === "Phoenix") notes.push(`凤凰按官方死亡成蛋、蛋未破坏则复活机制处理；蛋血量采用 2026 年 3 月平衡后的 ${PHOENIX_EGG_HP}，孵化时间 ${PHOENIX_EGG_SECONDS} 秒按当前圣水阶段换算为回合。`);
       if (card.name === "Elixir Golem") notes.push("圣水戈仑的三段形态、2→4 分裂和给对手总计 4 点圣水的风险收益按官方机制做成本平台化结算。");
       if (card.name === "Cannon Cart") notes.push(`加农炮战车按破盾后变成固定建筑炮台的机制处理，固定形态寿命以约 ${CANNON_CART_BUILDING_SECONDS} 秒换算为当前比赛阶段回合数。`);
       if (card.name === "Witch") notes.push("女巫的骷髅召唤按公开卡牌资料中的 4 个骷髅、约 7 秒一轮处理，并保留登场后的首次快速召唤。");
@@ -5164,6 +5177,7 @@ Vines|藤蔓
     }
 
     function unitStateMark(unit) {
+      if (unit.phoenixEgg) return "蛋";
       if (unit.type === "Building") return "筑";
       if (unit.banditDashCharging) return "冲";
       if (unit.cloaked > 0 || unit.banditStealth > 0) return "隐";
@@ -5204,7 +5218,8 @@ Vines|藤蔓
         if (Math.round(unit.pos) !== row || !laneOccupiesCell(displayLane, lane) || unit.hp <= 0) return;
         const stateText = unitDetailState(unit);
         const shieldText = unit.shield > 0 ? `，护盾 ${Math.round(unit.shield)}/${unit.maxShield}` : "";
-        details.push(`${sideName(unit.side)}的${cardName(unit.name)}${stateText ? `（${stateText}）` : ""}，血量 ${Math.max(0, Math.round(unit.hp))}/${unit.maxHp}${shieldText}`);
+        const eggText = unit.phoenixEgg ? `，孵化倒计时 ${Math.max(0, unit.phoenixEggCountdown || 0)} 回合` : "";
+        details.push(`${sideName(unit.side)}的${cardName(unit.name)}${stateText ? `（${stateText}）` : ""}，血量 ${Math.max(0, Math.round(unit.hp))}/${unit.maxHp}${shieldText}${eggText}`);
       });
       state.effects.forEach(effect => {
         if (effect.kind === "spell" && spellCoversCell(effect, row, lane)) details.push(spellEffectDetail(effect));
@@ -5232,6 +5247,7 @@ Vines|藤蔓
 
     function unitDetailState(unit) {
       const states = [];
+      if (unit.phoenixEgg) states.push("凤凰蛋/可被破坏");
       if (unit.type === "Building") states.push("建筑");
       if (unit.isAir) states.push("空中");
       else states.push("地面");
@@ -6408,6 +6424,39 @@ Vines|藤蔓
           shieldHp: 0
         };
       }
+      if (name === "Phoenix Egg") {
+        return {
+          name,
+          zh: cardName(name),
+          cost: 0,
+          rarity: "legendary",
+          type: "Building",
+          count: 1,
+          isAir: false,
+          isRanged: false,
+          isSplash: false,
+          isSwarm: false,
+          isBuildingTargeter: false,
+          isWinCondition: false,
+          diesOnAttack: false,
+          canHitAir: false,
+          canHitGround: false,
+          hp: PHOENIX_EGG_HP,
+          damage: 0,
+          range: 0,
+          speed: 0,
+          attacks: false,
+          spawnEvery: 0,
+          spawnSeconds: 0,
+          firstSpawnSeconds: 0,
+          spawnName: "",
+          spawnCount: 0,
+          deathSpawnName: "",
+          deathSpawnCount: 0,
+          buildingLife: Math.max(2, (state ? deathBombTurns(PHOENIX_EGG_SECONDS) : 3) + 2),
+          shieldHp: 0
+        };
+      }
       if (name === "Goblin Brawler") {
         return {
           name,
@@ -6932,6 +6981,7 @@ Vines|藤蔓
         state.queuedEffects = [];
       }
       tickUnitsStart();
+      processPhoenixEggs();
       processPendingMissiles();
       processPendingExplosions();
       maybeUseChampionAbility("player", "combat");
@@ -6979,6 +7029,28 @@ Vines|藤蔓
         }
         if (unit.type === "Building") unit.life--;
       });
+    }
+
+    function processPhoenixEggs() {
+      const hatched = [];
+      state.units.forEach(unit => {
+        if (!unit.phoenixEgg || unit.hp <= 0) return;
+        unit.phoenixEggCountdown = Math.max(0, (unit.phoenixEggCountdown || 1) - 1);
+        if (unit.phoenixEggCountdown > 0) return;
+        hatched.push(unit);
+      });
+      if (!hatched.length) return;
+      const hatchedIds = new Set(hatched.map(unit => unit.id));
+      state.units = state.units.filter(unit => !hatchedIds.has(unit.id));
+      hatched.forEach(egg => revivePhoenixFromEgg(egg));
+    }
+
+    function revivePhoenixFromEgg(egg) {
+      const phoenix = spawnUnit(egg.side, "Phoenix", egg.lane, clampPos(egg.pos), 1, { jitter: false });
+      phoenix.phoenixReborn = true;
+      phoenix.hp = Math.max(1, phoenix.maxHp);
+      phoenix.life = 0;
+      log(`${sideName(egg.side)}的 ${cardName("Phoenix Egg")} 没有被破坏，孵化出复生的${cardName("Phoenix")}。`);
     }
 
     function processPendingMissiles() {
@@ -7761,6 +7833,14 @@ Vines|藤蔓
         spawnManyAround(unit.side, "Bats", lane, clampPos(pos), 1, 0.62);
         return `${sideName(unit.side)}的 ${cardName(unit.name)} 被击倒，最后召唤出 1 只${cardName("Bats")}。`;
       }
+      if (unit.name === "Phoenix") {
+        const hits = applyDeathExplosion(unit.side, lane, pos, PHOENIX_DEATH_DAMAGE, PHOENIX_DEATH_TOWER_DAMAGE, PHOENIX_DEATH_RADIUS, cardName(unit.name), { knock: 0.25, short: "凤爆" });
+        if (unit.phoenixReborn) {
+          return `${sideName(unit.side)}的 ${cardName(unit.name)} 再次被击倒，死亡火焰波及 ${hits.units} 个单位${hits.towers ? `和 ${hits.towers} 座塔` : ""}，复生凤凰不再留下蛋。`;
+        }
+        const egg = spawnPhoenixEgg(unit.side, lane, pos);
+        return `${sideName(unit.side)}的 ${cardName(unit.name)} 被击倒，爆炸波及 ${hits.units} 个单位${hits.towers ? `和 ${hits.towers} 座塔` : ""}，并留下${cardName("Phoenix Egg")}；若 ${egg.phoenixEggCountdown} 回合内没有被破坏就会复活。`;
+      }
       if (unit.name === "Lava Hound") {
         spawnManyAround(unit.side, "Lava Pup", lane, clampPos(pos), 6, 0.9);
         return `${sideName(unit.side)}的 ${cardName(unit.name)} 爆裂成 6 只${cardName("Lava Pup")}，小猎犬开始攻击附近目标。`;
@@ -7782,6 +7862,19 @@ Vines|藤蔓
 
     function deathBombTurns(seconds) {
       return Math.max(1, Math.ceil(seconds / phaseInfo(state.time).seconds));
+    }
+
+    function spawnPhoenixEgg(side, lane, pos) {
+      const turns = deathBombTurns(PHOENIX_EGG_SECONDS);
+      const egg = spawnUnit(side, "Phoenix Egg", lane, clampPos(pos), 1, { jitter: false, hp: PHOENIX_EGG_HP, damage: 0 });
+      egg.phoenixEgg = true;
+      egg.phoenixEggCountdown = turns;
+      egg.life = turns + 2;
+      egg.attacks = false;
+      egg.speed = 0;
+      egg.targetId = null;
+      normalizeRiverCell(egg);
+      return egg;
     }
 
     function applyDeathExplosion(side, lane, pos, damage, towerDamage, radius, label, options = {}) {
