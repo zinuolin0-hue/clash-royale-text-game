@@ -2028,6 +2028,345 @@
         font-size: 22px;
       }
     }
+
+    @media (max-width: 760px) and (orientation: portrait), (hover: none) and (pointer: coarse) and (max-width: 820px) {
+      body.battle-active {
+        background: #071b38;
+      }
+
+      body.battle-active .app {
+        width: 100%;
+        max-width: none;
+        padding: 6px;
+      }
+
+      body.battle-active .topbar {
+        margin-bottom: 8px;
+        padding: 8px 10px;
+        border-width: 3px;
+        border-radius: 8px;
+      }
+
+      body.battle-active .brand-row {
+        align-items: center;
+      }
+
+      body.battle-active .title-logo {
+        width: 34px;
+        height: 34px;
+        margin-top: 0;
+        border-width: 2px;
+      }
+
+      body.battle-active h1 {
+        font-size: 20px;
+        line-height: 1;
+      }
+
+      body.battle-active .subtitle,
+      body.battle-active .status-pills {
+        display: none;
+      }
+
+      body.battle-active .topbar-actions {
+        width: 100%;
+        justify-items: start;
+      }
+
+      body.battle-active .audio-settings {
+        width: min(100%, 280px);
+        padding: 6px 8px;
+      }
+
+      body.battle-active button,
+      body.battle-active .arena-cell,
+      body.battle-active .hand-card {
+        touch-action: manipulation;
+      }
+
+      #battleScreen {
+        margin: 0;
+        padding: 6px;
+        border-width: 3px;
+        border-radius: 7px;
+      }
+
+      #battleScreen .hud {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 5px;
+        margin-bottom: 8px;
+      }
+
+      #battleScreen .hud-card {
+        min-height: 46px;
+        padding: 5px 6px;
+        border-width: 2px;
+        border-radius: 6px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 3px 0 rgba(8, 49, 96, 0.42);
+      }
+
+      #battleScreen .hud-label,
+      #battleScreen .hud-value {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      #battleScreen .hud-label {
+        font-size: 9px;
+      }
+
+      #battleScreen .hud-value {
+        margin-top: 2px;
+        font-size: clamp(12px, 3vw, 15px);
+      }
+
+      #battleScreen .battle-grid,
+      #battleScreen .battle-grid.ai,
+      #battleScreen .battle-grid.duel,
+      #battleScreen .battle-grid.online,
+      #battleScreen .battle-grid.demo,
+      #battleScreen .battle-grid.touchdown {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      #battleScreen .arena-panel {
+        order: 1;
+      }
+
+      #battleScreen #playerControlPanel {
+        order: 2;
+      }
+
+      #battleScreen #enemyControlPanel {
+        order: 3;
+      }
+
+      #battleScreen .battle-grid.online.local-enemy #enemyControlPanel {
+        order: 2;
+      }
+
+      #battleScreen .battle-grid.online.local-enemy #playerControlPanel {
+        order: 3;
+      }
+
+      #battleScreen .panel {
+        border-width: 3px;
+        border-radius: 7px;
+      }
+
+      #battleScreen .panel-head {
+        min-height: 42px;
+        padding: 8px 9px;
+      }
+
+      #battleScreen .panel-title {
+        font-size: 15px;
+      }
+
+      #battleScreen .pill,
+      #battleScreen .mini-badge {
+        font-size: 10px;
+      }
+
+      #battleScreen .panel-body {
+        padding: 8px;
+      }
+
+      #battleScreen .tower-strip {
+        width: 100%;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+        margin-bottom: 6px;
+      }
+
+      #battleScreen .tower-box {
+        padding: 6px;
+        border-width: 2px;
+        font-size: 10px;
+      }
+
+      #battleScreen .tower-box strong {
+        font-size: 12px;
+      }
+
+      #battleScreen .tower-box .mini-badge {
+        display: none;
+      }
+
+      #battleScreen .tower-box div[style] {
+        margin-top: 4px !important;
+      }
+
+      #battleScreen .bar {
+        height: 7px;
+        margin-top: 3px;
+        border-width: 1px;
+      }
+
+      #battleScreen .map {
+        width: min(100%, 430px);
+        aspect-ratio: 0.74;
+        margin: 0 auto 8px;
+        border-width: 3px;
+      }
+
+      #battleScreen .map-hint {
+        left: 6%;
+        right: 6%;
+        top: 2%;
+        min-height: 28px;
+        padding: 4px 7px;
+        font-size: 10px;
+      }
+
+      #battleScreen .arena-board {
+        top: 50.4%;
+        width: 71%;
+        height: 66%;
+        grid-template-rows: 16px repeat(21, minmax(0, 1fr));
+        gap: 1px;
+      }
+
+      #battleScreen .lane-head {
+        border-width: 1px;
+        border-radius: 4px 4px 0 0;
+        font-size: 9px;
+      }
+
+      #battleScreen .arena-cell {
+        grid-template-columns: 14px minmax(0, 1fr);
+        gap: 1px;
+        padding: 0 1px;
+        font-size: 8px;
+        line-height: 1;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.72);
+      }
+
+      #battleScreen .row-mark {
+        font-size: 8px;
+      }
+
+      #battleScreen .hand-grid {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(116px, 37vw);
+        grid-template-columns: none !important;
+        gap: 7px;
+        overflow-x: auto;
+        padding: 2px 2px 8px;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      #battleScreen .hand-card {
+        min-height: 78px;
+        grid-template-columns: 30px minmax(0, 1fr);
+        gap: 6px;
+        padding: 7px;
+        scroll-snap-align: start;
+      }
+
+      #battleScreen .hand-card .cost {
+        width: 30px;
+        height: 30px;
+        border-width: 2px;
+        font-size: 13px;
+      }
+
+      #battleScreen .hand-card .card-name {
+        font-size: 13px;
+        line-height: 1.12;
+      }
+
+      #battleScreen .hand-card .card-meta {
+        font-size: 10px;
+        line-height: 1.22;
+      }
+
+      #battleScreen .side-status {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4px 8px;
+        margin-bottom: 7px;
+        font-size: 10px;
+      }
+
+      #battleScreen .side-status strong {
+        font-size: 14px;
+      }
+
+      #battleScreen .placement-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+        gap: 5px;
+        margin-top: 8px;
+      }
+
+      #battleScreen .placement-grid button {
+        min-height: 42px;
+        padding: 4px 2px;
+        font-size: 10px;
+        line-height: 1.08;
+      }
+
+      #battleScreen .ability-panel {
+        margin-top: 8px;
+      }
+
+      #battleScreen .ability-button {
+        min-height: 42px;
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 6px;
+        padding: 6px;
+      }
+
+      #battleScreen .ability-button small {
+        display: none;
+      }
+
+      #battleScreen .battle-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      #battleScreen .battle-actions button {
+        min-height: 40px;
+        padding: 6px;
+        font-size: 11px;
+        line-height: 1.12;
+      }
+
+      #battleScreen h3 {
+        margin: 8px 0 5px;
+        font-size: 15px;
+      }
+
+      #battleScreen .log {
+        height: 118px;
+        padding: 7px;
+        border-width: 3px;
+        font-size: 11px;
+      }
+
+      #battleScreen .battle-chat {
+        margin-top: 8px;
+      }
+
+      #battleScreen .online-chat-log {
+        max-height: 110px;
+      }
+
+      #battleScreen .online-chat-form {
+        grid-template-columns: minmax(0, 1fr) 64px;
+        gap: 6px;
+      }
+
+      #battleScreen .online-chat-form input {
+        min-height: 34px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -4776,6 +5115,7 @@ Vines|藤蔓
     function showScreen(name) {
       el("setupScreen").classList.toggle("active", name === "setup");
       el("battleScreen").classList.toggle("active", name === "battle");
+      document.body.classList.toggle("battle-active", name === "battle");
       if (name === "setup") stopBattleMusic();
     }
 
@@ -4840,7 +5180,8 @@ Vines|藤蔓
     function renderBattle() {
       if (!state) return;
       const phase = phaseInfo(state.time);
-      el("battleGrid").className = `battle-grid ${state.mode}`;
+      const localSideClass = state.mode === "online" ? (online.localSide === "enemy" ? "local-enemy" : "local-player") : "";
+      el("battleGrid").className = `battle-grid ${state.mode} ${localSideClass}`.trim();
       el("timeHud").textContent = `${state.time} 秒`;
       el("phaseHud").textContent = `${phase.name} · 每回合 ${phase.seconds} 秒`;
       el("playerElixirLabel").textContent = state.mode === "demo" ? "电脑A圣水" : state.mode === "duel" || state.mode === "online" ? "玩家A圣水" : "你的圣水";
